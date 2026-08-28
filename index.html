@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>League Dashboard — Live</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --field:#16261c; --field-line:#223626;
+    --paper:#f6f1e4; --paper-dim:#eee6d2;
+    --ink:#1c1a14; --ink-soft:#6b6558;
+    --brass:#c9a24b; --brass-deep:#a9822f;
+    --good:#3f7d54; --warn:#c9a24b; --over:#b3402f;
+    --line:#dcd2b4;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: repeating-linear-gradient(90deg, var(--field-line) 0 2px, transparent 2px 64px), var(--field);
+    font-family:'Inter',sans-serif; color:var(--ink); min-height:100vh;
+    display:flex; justify-content:center;
+    padding:20px 14px 90px;
+  }
+  .app{ width:100%; max-width:460px; }
+
+  /* ---- top status ---- */
+  .status{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 4px 12px; color:#cfd8ce; font-family:'IBM Plex Mono',monospace;
+    font-size:11px; letter-spacing:.04em;
+  }
+  .status .dot{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; }
+  .dot.ok{ background:#5fd88a; box-shadow:0 0 0 3px rgba(95,216,138,.18); }
+  .dot.pending{ background:#c9a24b; box-shadow:0 0 0 3px rgba(201,162,75,.18); animation:pulse 1.2s infinite; }
+  .dot.err{ background:#e05c48; box-shadow:0 0 0 3px rgba(224,92,72,.18); }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+  /* ---- shared team picker (Team/Picks/Exempt tabs) ---- */
+  .team-picker{ margin-bottom:12px; }
+  .team-picker select{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line);
+    background:var(--paper); font-family:'Inter',sans-serif; font-size:13.5px; color:var(--ink);
+  }
+
+  /* ---- card shell ---- */
+  .card{
+    background:var(--paper); border-radius:18px;
+    box-shadow:0 24px 48px -18px rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.4) inset;
+    overflow:hidden; border:1px solid rgba(0,0,0,.06);
+    margin-bottom:14px;
+  }
+  .card-head{ padding:20px 22px 14px; border-bottom:1px dashed var(--line); }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--brass-deep); margin:0 0 5px;
+  }
+  h1{
+    font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:26px;
+    line-height:1.05; letter-spacing:.01em; margin:0; text-transform:uppercase;
+    min-height:30px;
+  }
+  .subtext{ font-size:12px; color:var(--ink-soft); margin:6px 0 0; line-height:1.5; }
+
+  /* ---- generic sort/tab row ---- */
+  .toggle-row{ display:flex; gap:6px; padding:12px 22px 0; }
+  .toggle-btn{
+    flex:1; padding:8px 8px; border-radius:8px; border:1px solid var(--line);
+    background:var(--paper); color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;
+    font-size:10px; letter-spacing:.03em; cursor:pointer; text-transform:uppercase;
+  }
+  .toggle-btn.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .toggle-btn.active.good{ background:var(--good); border-color:var(--good); }
+  .toggle-btn.active.over{ background:var(--over); border-color:var(--over); }
+
+  .underline-tabs{ display:flex; gap:6px; padding:12px 22px 0; border-bottom:1px solid var(--line); }
+  .u-tab{
+    flex:1; padding:8px 6px; border:none; background:none; cursor:pointer;
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:600;
+    color:var(--ink-soft); border-bottom:2.5px solid transparent; margin-bottom:-1px;
+  }
+  .u-tab.active{ color:var(--ink); border-bottom-color:var(--brass); }
+
+  /* ---- cap gauge (My Team) ---- */
+  .gauge-wrap{ display:flex; align-items:center; gap:18px; padding:20px 22px; border-bottom:1px dashed var(--line); }
+  .gauge{ position:relative; width:104px; height:104px; flex:none; }
+  .gauge svg{ transform:rotate(-90deg); }
+  .gauge-num{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .gauge-num .pct{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:23px; line-height:1; }
+  .gauge-num .lbl{ font-family:'IBM Plex Mono',monospace; font-size:8.5px; letter-spacing:.08em; color:var(--ink-soft); margin-top:3px; text-transform:uppercase; }
+  .cap-figures{ flex:1; }
+  .cap-row{ display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; }
+  .cap-row .k{ font-size:12px; color:var(--ink-soft); }
+  .cap-row .v{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; }
+  .cap-row .v.accent{ color:var(--good); }
+  .cap-row .v.over{ color:var(--over); }
+  .cap-divider{ height:1px; background:var(--line); margin:2px 0; }
+
+  /* ---- position colors (shared) ---- */
+  .pos{
+    font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:10.5px;
+    width:28px; height:28px; border-radius:7px; color:var(--paper);
+    display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .pos.pos-QB{ background:#5b7a9c; } .pos.pos-RB{ background:#6f8f5a; }
+  .pos.pos-WR{ background:#b06a3f; } .pos.pos-TE{ background:#8a6a9c; }
+  .pos.pos-K{ background:#4f9c94; } .pos.pos-DST{ background:#8a7a5a; }
+  .pos.pos-other{ background:var(--field); }
+
+  .list{ padding:6px 10px 8px; min-height:60px; }
+  .row{ display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:10px; }
+  .row:hover{ background:var(--paper-dim); }
+  .row.selected{ background:rgba(201,162,75,.16); border:1.5px solid var(--brass); }
+  .row.is-exempt{ background:rgba(201,162,75,.12); }
+  .row.mine{ background:rgba(201,162,75,.14); }
+  .rname{ flex:1; min-width:0; }
+  .rname .n{ font-weight:600; font-size:14px; }
+  .rname .t{ font-size:11px; color:var(--ink-soft); }
+  .rsal{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13.5px; flex:none; }
+  .tag{
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:8.5px;
+    letter-spacing:.04em; text-transform:uppercase; padding:1.5px 5px; border-radius:5px;
+    margin-left:5px; vertical-align:middle;
+  }
+  .tag.rookie{ background:var(--good); color:#fff; }
+  .tag.exempt{ background:var(--brass); color:#3b2c0e; }
+  .tag.you{ background:none; color:var(--brass-deep); padding-left:0; }
+  .tag.over{ background:var(--over); color:#fff; }
+  .tag.team{
+    background:var(--paper-dim); color:var(--ink-soft); border:1px solid var(--line);
+    font-weight:500; margin-left:0;
+  }
+  .tag.team.fa{ font-style:italic; }
+
+  .bar-bg{ height:5px; border-radius:3px; background:var(--line); margin-top:5px; overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:3px; }
+
+  .placeholder{ padding:26px 12px; text-align:center; color:var(--ink-soft); font-size:13px; }
+  .all-clear{ padding:28px 12px; text-align:center; color:var(--good); }
+  .all-clear .big{ font-size:28px; margin-bottom:6px; }
+  .err-box{
+    margin:14px 22px; padding:12px 14px; background:#f7e3de; border:1px dashed var(--over);
+    border-radius:10px; font-size:12px; color:#7a2c1f; line-height:1.5;
+  }
+  .toast{
+    margin:14px 22px; padding:12px 14px; background:#e7efe6; border:1px dashed var(--good);
+    border-radius:10px; font-size:12.5px; color:#2f5b3f; line-height:1.5;
+  }
+  .eligibility-note{
+    margin:14px 22px 0; padding:11px 13px; background:var(--paper-dim);
+    border:1px dashed var(--brass-deep); border-radius:10px; font-size:11.5px;
+    color:var(--ink-soft); line-height:1.5;
+  }
+  .eligibility-note b{ color:var(--ink); }
+
+  .deadline-banner{
+    padding:12px 22px; font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+    display:flex; justify-content:space-between; align-items:center; letter-spacing:.02em;
+  }
+  .deadline-banner.open{ background:#e7efe6; color:#2f5b3f; }
+  .deadline-banner.soon{ background:#f6ecd5; color:#8a6a1f; }
+  .deadline-banner.closed{ background:#f7e3de; color:#7a2c1f; }
+
+  .locked-body{ padding:22px; text-align:center; }
+  .locked-icon{ font-size:28px; margin-bottom:8px; }
+  .locked-player{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:24px; margin:4px 0 2px; }
+  .locked-sub{ font-size:12px; color:var(--ink-soft); }
+
+  .preview-box{
+    margin:10px 12px 14px; padding:14px 16px; background:var(--paper-dim);
+    border-radius:12px; border:1px dashed var(--brass);
+  }
+  .preview-row{ display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; font-size:13px; }
+  .preview-row .k{ color:var(--ink-soft); }
+  .preview-row .v{ font-family:'IBM Plex Mono',monospace; font-weight:600; }
+  .preview-row.new .v{ color:var(--good); font-size:15px; }
+  .preview-arrow{ text-align:center; font-size:11px; color:var(--ink-soft); margin:2px 0; }
+  .confirm-wrap{ padding:12px 22px 20px; }
+
+  .primary-btn{
+    width:100%; padding:12px; border-radius:10px; border:none;
+    background:var(--ink); color:var(--paper); font-weight:600; font-size:13.5px;
+    cursor:pointer; letter-spacing:.02em; font-family:'Inter',sans-serif;
+  }
+  .primary-btn:hover{ opacity:.92; }
+  .primary-btn:disabled{ opacity:.45; cursor:default; }
+  .pin-row{ display:flex; gap:8px; padding:0 22px 14px; }
+  .pin-row input{
+    flex:1; padding:10px 12px; border-radius:9px; border:1px solid var(--line);
+    background:#fff; font-family:'Inter',sans-serif; font-size:14px; color:var(--ink);
+  }
+  .pin-row button{
+    flex:none; padding:0 16px; border-radius:9px; border:none; background:var(--ink);
+    color:var(--paper); font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .pin-row button:disabled{ opacity:.45; }
+
+  .summary-row{ display:flex; gap:8px; padding:14px 22px; border-bottom:1px dashed var(--line); }
+  .summary-chip{ flex:1; text-align:center; padding:9px 6px; border-radius:9px; background:var(--paper-dim); }
+  .summary-chip .num{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:20px; line-height:1; }
+  .summary-chip .lbl{ font-family:'IBM Plex Mono',monospace; font-size:8.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin-top:2px; }
+  .summary-chip.submitted .num, .summary-chip.done .num{ color:var(--good); }
+  .summary-chip.pending .num{ color:var(--warn); }
+  .summary-chip.missed .num{ color:var(--over); }
+
+  .round-chip{
+    font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:15px;
+    width:34px; height:34px; border-radius:8px; background:var(--field); color:var(--paper);
+    display:flex; align-items:center; justify-content:center; flex:none; line-height:1;
+  }
+
+  .card-foot{
+    padding:12px 22px 18px; display:flex; justify-content:space-between; align-items:center;
+    font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--ink-soft);
+  }
+  .refresh{
+    border:1px solid var(--line); background:var(--paper); color:var(--ink);
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.04em;
+    padding:6px 10px; border-radius:8px; cursor:pointer;
+  }
+  .refresh:disabled{ opacity:.5; }
+
+  /* ---- bottom nav ---- */
+  .bottom-nav{
+    position:fixed; bottom:0; left:0; right:0; background:var(--paper);
+    border-top:1px solid var(--line); display:flex; justify-content:center;
+    box-shadow:0 -8px 24px rgba(0,0,0,.3); z-index:10;
+  }
+  .bottom-nav-inner{ width:100%; max-width:460px; display:flex; }
+  .nav-btn{
+    flex:1; border:none; background:none; padding:10px 2px 8px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--ink-soft);
+    letter-spacing:.02em;
+  }
+  .nav-btn .ic{ font-size:17px; line-height:1; }
+  .nav-btn.active{ color:var(--brass-deep); }
+
+  .field-err{ color:var(--over); font-size:12px; margin:8px 22px 0; display:none; }
+  .field-err.show{ display:block; }
+  label{ display:block; font-size:12px; color:var(--ink-soft); margin:12px 22px 4px; }
+  select.plain, input.plain{
+    margin:0 22px; width:calc(100% - 44px); padding:10px 12px; border-radius:9px;
+    border:1px solid var(--line); background:#fff; font-family:'Inter',sans-serif;
+    font-size:14px; color:var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="status">
+    <span><span class="dot pending" id="statusDot"></span><span id="statusText">connecting…</span></span>
+    <span>LIVE — POLLS EVERY 75s</span>
+  </div>
+
+  <div class="team-picker" id="teamPickerWrap" style="display:none;">
+    <select id="teamSelect"></select>
+  </div>
+
+  <div id="viewRoot"></div>
+</div>
+
+<div class="bottom-nav">
+  <div class="bottom-nav-inner" id="bottomNav"></div>
+</div>
+
+<script>
+/* =====================================================================
+   SHARED STATE & DATA LAYER
+   ===================================================================== */
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbxVGwkt88noCmju0w9z8RhJdWFBSx9TMjJOZPp2MHpIpXQ006WG69kWyMxGKveprg-RMg/exec";
+const POLL_MS = 75000;
+const POSITION_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3, K: 4, DST: 5 };
+
+const state = {
+  activeTab: 'team',
+  selectedTeam: null,
+  data: { salaryCap: null, roster: null, exemptSelections: null, checklist: null, config: null, draftPicks: null, movers: null },
+  ui: {
+    teamSort: 'position',
+    exemptSort: 'position',
+    exemptSelectedPlayer: null,
+    exemptPin: '',
+    draftYear: '2026',
+    moversView: 'gainers',
+    leagueSort: 'cap',
+    commissioner: null, // { team, pin }
+  },
+};
+
+async function get(resource, params){
+  const qs = new URLSearchParams({ resource, ...(params||{}) });
+  const res = await fetch(ENDPOINT + '?' + qs.toString());
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+async function post(body){
+  const res = await fetch(ENDPOINT, { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+function fmtMoney(n){ return '$' + Number(n).toLocaleString(); }
+function posRank(pos){ const p=(pos||'').toUpperCase(); return POSITION_ORDER.hasOwnProperty(p)?POSITION_ORDER[p]:99; }
+function posClass(pos){
+  const p=(pos||'').toUpperCase();
+  return ['QB','RB','WR','TE','K','DST'].includes(p) ? 'pos-'+p : 'pos-other';
+}
+
+const dot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+function setStatus(s, t){ dot.className='dot '+s; statusText.textContent=t; }
+
+/* =====================================================================
+   POLLING — fetch everything shared across tabs every cycle
+   ===================================================================== */
+async function refreshAll(isInitial){
+  setStatus('pending', isInitial ? 'connecting…' : 'syncing…');
+  try {
+    const [cap, exempt, checklist, config, draft, movers] = await Promise.all([
+      get('salarycap'), get('exemptstatus'), get('checklist'), get('config'),
+      get('draftpicks'), get('moversshakers'),
+    ]);
+    state.data.salaryCap = cap;
+    state.data.exemptSelections = exempt;
+    state.data.checklist = checklist;
+    state.data.config = config;
+    state.data.draftPicks = draft;
+    state.data.movers = movers;
+
+    if (isInitial){
+      state.selectedTeam = cap.teams[0].team;
+      const sel = document.getElementById('teamSelect');
+      sel.innerHTML = cap.teams.map(t => `<option value="${t.team}">${t.team}</option>`).join('');
+      sel.value = state.selectedTeam;
+    }
+
+    if (['team','picks','exempt'].includes(state.activeTab) && state.selectedTeam){
+      state.data.roster = await get('roster', { team: state.selectedTeam });
+    }
+
+    clearError();
+    setStatus('ok', 'synced ' + new Date().toLocaleTimeString());
+    render();
+  } catch (err){
+    setStatus('err', 'sync failed');
+    showError(err.message + ' — will retry automatically.');
+  }
+}
+
+function showError(msg){
+  const root = document.getElementById('viewRoot');
+  const box = document.createElement('div');
+  box.className = 'err-box';
+  box.innerHTML = `<b>Sync issue:</b> ${msg}`;
+  const existing = root.querySelector('.err-box');
+  if (existing) existing.remove();
+  root.prepend(box);
+}
+function clearError(){
+  const existing = document.querySelector('.err-box');
+  if (existing) existing.remove();
+}
+
+document.getElementById('teamSelect').addEventListener('change', async (e) => {
+  state.selectedTeam = e.target.value;
+  if (['team','picks','exempt'].includes(state.activeTab)){
+    state.data.roster = await get('roster', { team: state.selectedTeam });
+  }
+  state.ui.exemptSelectedPlayer = null;
+  render();
+});
+
+/* =====================================================================
+   NAVIGATION
+   ===================================================================== */
+const TABS = [
+  { id: 'team', icon: '🏈', label: 'Team' },
+  { id: 'league', icon: '📊', label: 'League' },
+  { id: 'picks', icon: '🎯', label: 'Picks' },
+  { id: 'movers', icon: '📈', label: 'Movers' },
+  { id: 'exempt', icon: '🔖', label: 'Exempt' },
+  { id: 'commish', icon: '🛠️', label: 'Commish' },
+];
+
+document.getElementById('bottomNav').innerHTML = TABS.map(t =>
+  `<button class="nav-btn" data-tab="${t.id}"><span class="ic">${t.icon}</span>${t.label}</button>`
+).join('');
+
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    state.activeTab = btn.getAttribute('data-tab');
+    if (['team','picks','exempt'].includes(state.activeTab) && !state.data.roster){
+      state.data.roster = await get('roster', { team: state.selectedTeam });
+    }
+    render();
+  });
+});
+
+function updateTeamPickerVisibility(){
+  const show = ['team','picks','exempt'].includes(state.activeTab);
+  document.getElementById('teamPickerWrap').style.display = show ? 'block' : 'none';
+}
+
+/* =====================================================================
+   RENDER DISPATCH
+   ===================================================================== */
+function render(){
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === state.activeTab));
+  updateTeamPickerVisibility();
+  const root = document.getElementById('viewRoot');
+  switch (state.activeTab){
+    case 'team': root.innerHTML = renderMyTeam(); attachMyTeamHandlers(); break;
+    case 'league': root.innerHTML = renderLeague(); attachLeagueHandlers(); break;
+    case 'picks': root.innerHTML = renderDraftPicks(); attachDraftHandlers(); break;
+    case 'movers': root.innerHTML = renderMovers(); attachMoversHandlers(); break;
+    case 'exempt': root.innerHTML = renderExempt(); attachExemptHandlers(); break;
+    case 'commish': root.innerHTML = renderCommish(); attachCommishHandlers(); break;
+  }
+}
+
+/* =====================================================================
+   MY TEAM
+   ===================================================================== */
+function sortedRoster(roster, mode){
+  const list = [...roster];
+  if (mode === 'salary') list.sort((a,b) => b.salary - a.salary);
+  else list.sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
+  return list;
+}
+
+function renderMyTeam(){
+  const cap = state.data.salaryCap;
+  const roster = state.data.roster;
+  if (!cap || !roster) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
+
+  const info = cap.teams.find(t => t.team === state.selectedTeam);
+  const myExempt = state.data.exemptSelections.selections.find(s => s.team === state.selectedTeam);
+  const exemptPlayer = myExempt ? myExempt.player : null;
+  const cbsDone = state.data.checklist.checklist.find(c => c.team === state.selectedTeam);
+  const cbsUpdateDone = !!(cbsDone && cbsDone.done);
+
+  const circumference = 283;
+  const pct = info ? info.capUsedPct : 0;
+  const offset = circumference - (Math.min(pct,100)/100)*circumference;
+  const arcColor = pct > 100 ? '#b3402f' : (pct > 90 ? '#c9a24b' : '#3f7d54');
+
+  const sorted = sortedRoster(roster.roster, state.ui.teamSort);
+  const rows = sorted.map(p => {
+    const isExempt = p.player === exemptPlayer;
+    const note = (isExempt && !cbsUpdateDone) ? ' · pending $0 update' : '';
+    return `
+      <div class="row${isExempt ? ' is-exempt':''}">
+        <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
+        <span class="rname"><span class="n">${p.player}${isExempt?'<span class="tag exempt">EXEMPT</span>':''}</span><span class="t"> · ${p.nflTeam||'—'}${note}</span></span>
+        <span class="rsal">$${p.salary}</span>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div class="card-head">
+        <p class="eyebrow">My Team</p>
+        <h1>${state.selectedTeam || '—'}</h1>
+      </div>
+      <div class="gauge-wrap">
+        <div class="gauge">
+          <svg width="104" height="104" viewBox="0 0 104 104">
+            <circle cx="52" cy="52" r="45" fill="none" stroke="#e4dcc4" stroke-width="9"/>
+            <circle cx="52" cy="52" r="45" fill="none" stroke="${arcColor}" stroke-width="9" stroke-linecap="round"
+              transform="rotate(-90 52 52)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+          </svg>
+          <div class="gauge-num"><span class="pct">${pct}%</span><span class="lbl">of cap</span></div>
+        </div>
+        <div class="cap-figures">
+          <div class="cap-row"><span class="k">Salary used</span><span class="v">${fmtMoney(info?info.totalSalary:0)}</span></div>
+          <div class="cap-row"><span class="k">League cap</span><span class="v">${fmtMoney(info?info.cap:200)}</span></div>
+          <div class="cap-divider"></div>
+          <div class="cap-row"><span class="k">Remaining</span><span class="v ${info&&info.capSpace<0?'over':'accent'}">${fmtMoney(info?info.capSpace:0)}</span></div>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <button class="toggle-btn${state.ui.teamSort==='position'?' active':''}" data-sort="position">By Position</button>
+        <button class="toggle-btn${state.ui.teamSort==='salary'?' active':''}" data-sort="salary">By Salary</button>
+      </div>
+      <div class="list">${rows}</div>
+      <div class="card-foot"><span>SOURCE: ${roster.salaryTabUsed}</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
+    </div>`;
+}
+
+function attachMyTeamHandlers(){
+  document.querySelectorAll('[data-sort]').forEach(btn => {
+    btn.addEventListener('click', () => { state.ui.teamSort = btn.getAttribute('data-sort'); render(); });
+  });
+  const rb = document.getElementById('refreshBtn');
+  if (rb) rb.addEventListener('click', () => refreshAll(false));
+}
+
+/* =====================================================================
+   LEAGUE OVERVIEW
+   ===================================================================== */
+function renderLeague(){
+  const cap = state.data.salaryCap;
+  if (!cap) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
+
+  let teams = [...cap.teams];
+  if (state.ui.leagueSort === 'cap') teams.sort((a,b) => a.capSpace - b.capSpace);
+  else teams.sort((a,b) => a.team.localeCompare(b.team));
+
+  const rows = teams.map((t,i) => {
+    const over = t.capSpace < 0;
+    const pct = Math.min(t.capUsedPct, 100);
+    const barColor = over ? 'var(--over)' : (t.capUsedPct>90 ? 'var(--warn)' : 'var(--good)');
+    const isMine = t.team === state.selectedTeam;
+    return `
+      <div class="row${isMine?' mine':''}">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);width:16px;text-align:right;">${i+1}</span>
+        <div class="rname">
+          <span class="n">${t.team}${isMine?'<span class="tag you">YOU</span>':''}${over?'<span class="tag over">Over Cap</span>':''}</span>
+          <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${barColor};"></div></div>
+        </div>
+        <div style="text-align:right;">
+          <div class="rsal" style="color:${over?'var(--over)':'var(--ink)'};">${over?'−':''}${fmtMoney(Math.abs(t.capSpace))}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);">${t.capUsedPct}%</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div class="card-head">
+        <p class="eyebrow">League Overview</p>
+        <h1>All 12 Teams</h1>
+        <p class="subtext">Sorted to surface trade targets — tightest cap space needs to shed salary.</p>
+      </div>
+      <div class="toggle-row">
+        <button class="toggle-btn${state.ui.leagueSort==='cap'?' active':''}" data-lsort="cap">Cap Space ↑</button>
+        <button class="toggle-btn${state.ui.leagueSort==='az'?' active':''}" data-lsort="az">A–Z</button>
+      </div>
+      <div class="list">${rows}</div>
+      <div class="card-foot"><span>SOURCE: League Salary Cap</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
+    </div>`;
+}
+function attachLeagueHandlers(){
+  document.querySelectorAll('[data-lsort]').forEach(btn => {
+    btn.addEventListener('click', () => { state.ui.leagueSort = btn.getAttribute('data-lsort'); render(); });
+  });
+  const rb = document.getElementById('refreshBtn');
+  if (rb) rb.addEventListener('click', () => refreshAll(false));
+}
+
+/* =====================================================================
+   DRAFT PICKS
+   ===================================================================== */
+function renderDraftPicks(){
+  const draft = state.data.draftPicks;
+  if (!draft) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
+
+  const years = ['2026','2027','2028','2029'];
+  const teamPicks = draft.picks.filter(p => p.currentOwnerTeam === state.selectedTeam && p.year === state.ui.draftYear);
+  teamPicks.sort((a,b) => {
+    const ra = parseInt(a.round,10)||0, rb = parseInt(b.round,10)||0;
+    if (ra !== rb) return ra-rb;
+    return (parseInt(a.pick,10)||0) - (parseInt(b.pick,10)||0);
+  });
+
+  const rows = teamPicks.map(p => {
+    const label = p.pick ? `Round ${p.round}, Pick ${p.pick}` : `Round ${p.round}`;
+    const sub = p.overallPick ? `Overall #${p.overallPick}` : '';
+    return `
+      <div class="row">
+        <span class="round-chip">${p.round}</span>
+        <div class="rname"><span class="n">${label}</span>${sub?`<div class="t">${sub}</div>`:''}</div>
+        ${p.traded?`<span class="tag team">via ${p.originalOwnerTeam}</span>`:''}
+      </div>`;
+  }).join('') || `<div class="placeholder">No picks found for this team/year.</div>`;
+
+  return `
+    <div class="card">
+      <div class="card-head">
+        <p class="eyebrow">Draft Picks</p>
+        <h1>${state.selectedTeam || '—'}</h1>
+      </div>
+      <div class="underline-tabs">${years.map(y => `<button class="u-tab${y===state.ui.draftYear?' active':''}" data-year="${y}">${y}</button>`).join('')}</div>
+      <p class="subtext" style="padding:12px 22px 0;">${teamPicks.length} pick${teamPicks.length!==1?'s':''} in ${state.ui.draftYear}</p>
+      <div class="list">${rows}</div>
+      <div class="card-foot"><span>SOURCE: Draft Picks</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
+    </div>`;
+}
+function attachDraftHandlers(){
+  document.querySelectorAll('[data-year]').forEach(btn => {
+    btn.addEventListener('click', () => { state.ui.draftYear = btn.getAttribute('data-year'); render(); });
+  });
+  const rb = document.getElementById('refreshBtn');
+  if (rb) rb.addEventListener('click', () => refreshAll(false));
+}
+
+/* =====================================================================
+   MOVERS & SHAKERS
+   ===================================================================== */
+function renderMovers(){
+  const m = state.data.movers;
+  if (!m) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
+  if (m.note){
+    return `<div class="card"><div class="card-head"><p class="eyebrow">Movers & Shakers</p><h1>Salary Swings</h1><p class="subtext">${m.note}</p></div><div class="placeholder">Check back after the next salary update.</div></div>`;
+  }
+  const items = state.ui.moversView === 'gainers' ? m.gainers : m.losers;
+  const rows = (items||[]).map((p,i) => {
+    const up = p.delta > 0;
+    const teamTag = p.fantasyTeam ? `<span class="tag team">${p.fantasyTeam}</span>` : `<span class="tag team fa">Free Agent</span>`;
+    return `
+      <div class="row">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);width:16px;text-align:right;">${i+1}</span>
+        <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
+        <div class="rname"><span class="n">${p.player}</span><div class="t">${p.nflTeam||'—'} ${teamTag}</div></div>
+        <div style="text-align:right;">
+          <div class="rsal" style="font-weight:700;color:${up?'var(--good)':'var(--over)'};">${up?'+':''}$${p.delta}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);">$${p.previousSalary} → $${p.currentSalary}</div>
+        </div>
+      </div>`;
+  }).join('') || `<div class="placeholder">No ${state.ui.moversView} this update.</div>`;
+
+  return `
+    <div class="card">
+      <div class="card-head">
+        <p class="eyebrow">Movers & Shakers</p>
+        <h1>Salary Swings</h1>
+        <p class="subtext">Comparing ${m.previousTab} → ${m.currentTab}</p>
+      </div>
+      <div class="toggle-row">
+        <button class="toggle-btn${state.ui.moversView==='gainers'?' active good':''}" data-mview="gainers">↑ Gainers</button>
+        <button class="toggle-btn${state.ui.moversView==='losers'?' active over':''}" data-mview="losers">↓ Losers</button>
+      </div>
+      <div class="list">${rows}</div>
+      <div class="card-foot"><span>SOURCE: Player Salaries (Trend)</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
+    </div>`;
+}
+function attachMoversHandlers(){
+  document.querySelectorAll('[data-mview]').forEach(btn => {
+    btn.addEventListener('click', () => { state.ui.moversView = btn.getAttribute('data-mview'); render(); });
+  });
+  const rb = document.getElementById('refreshBtn');
+  if (rb) rb.addEventListener('click', () => refreshAll(false));
+}
+
+/* =====================================================================
+   SALARY EXEMPT SELECTION
+   ===================================================================== */
+function deadlineState(){
+  const config = state.data.config;
+  if (!config || !config.exemptDeadline) return { state:'open', label:'No deadline set yet', ms:null };
+  const d = new Date(config.exemptDeadline);
+  if (isNaN(d.getTime())) return { state:'open', label:'No deadline set yet', ms:null };
+  const ms = d.getTime() - Date.now();
+  if (ms <= 0) return { state:'closed', label:'Deadline passed', ms };
+  const hrs = ms / 3.6e6;
+  return { state: hrs<24?'soon':'open', label:'Deadline: '+d.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}), ms };
+}
+
+function renderExempt(){
+  const roster = state.data.roster;
+  if (!roster) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
+
+  const ds = deadlineState();
+  const existing = state.data.exemptSelections.selections.find(s => s.team === state.selectedTeam);
+  const bannerHtml = `<div class="deadline-banner ${ds.state}">${ds.state==='closed' ? 'Selection window closed' : ds.label + (ds.ms!==null ? '  ·  ' + fmtRemaining(ds.ms) : '')}</div>`;
+
+  if ((existing && existing.locked) || ds.state === 'closed'){
+    const body = existing
+      ? `<div class="locked-icon">🔒</div><div class="locked-player">${existing.player}</div><div class="locked-sub">Locked in as your Salary Exempt pick.</div>`
+      : `<div class="locked-icon">—</div><div class="locked-player">No selection made</div><div class="locked-sub">The deadline passed before a pick was submitted — this team forfeits the exempt status for the season.</div>`;
+    return `<div class="card"><div class="card-head"><p class="eyebrow">Salary Exempt</p><h1>${state.selectedTeam||'—'}</h1></div>${bannerHtml}<div class="locked-body">${body}</div></div>`;
+  }
+
+  const eligible = roster.roster.filter(p => (p.position||'').toUpperCase() !== 'DST');
+  const excluded = roster.roster.length - eligible.length;
+  const sorted = sortedRoster(eligible, state.ui.exemptSort);
+  const info = state.data.salaryCap.teams.find(t => t.team === state.selectedTeam);
+  const teamTotal = info ? info.totalSalary : 0;
+
+  const rows = sorted.map(p => {
+    const sel = state.ui.exemptSelectedPlayer === p.player;
+    return `
+      <div class="row${sel?' selected':''}" data-player="${p.player}">
+        <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
+        <span class="rname"><span class="n">${p.player}${p.isRookie?'<span class="tag rookie">ROOKIE</span>':''}</span><span class="t"> · ${p.nflTeam||'—'}</span></span>
+        <span class="rsal">$${p.salary}</span>
+      </div>`;
+  }).join('');
+
+  let previewHtml = '';
+  if (state.ui.exemptSelectedPlayer){
+    const p = roster.roster.find(r => r.player === state.ui.exemptSelectedPlayer);
+    const newTotal = teamTotal - (p?p.salary:0);
+    previewHtml = `
+      <div class="preview-box">
+        <div class="preview-row"><span class="k">Current team salary</span><span class="v">${fmtMoney(teamTotal)}</span></div>
+        <div class="preview-arrow">↓ if ${state.ui.exemptSelectedPlayer} becomes exempt ($0)</div>
+        <div class="preview-row new"><span class="k">New team salary</span><span class="v">${fmtMoney(newTotal)}</span></div>
+      </div>
+      <label style="margin:0 22px 4px;">Your PIN, to confirm</label>
+      <div class="pin-row">
+        <input type="password" inputmode="numeric" id="exemptPinInput" placeholder="PIN" value="${state.ui.exemptPin}">
+        <button id="exemptSubmitBtn">${existing ? 'Update Pick' : 'Lock In Pick'}</button>
+      </div>`;
+  }
+
+  return `
+    <div class="card">
+      <div class="card-head"><p class="eyebrow">Salary Exempt</p><h1>${state.selectedTeam||'—'}</h1></div>
+      ${bannerHtml}
+      ${existing ? `<div class="toast">Currently submitted: <b>${existing.player}</b>. You can change this until the deadline.</div>` : ''}
+      <div class="eligibility-note"><b>Eligibility:</b> only 1st-year (rookie) or 2nd-year players qualify. DST is never eligible${excluded>0?' — '+excluded+' hidden':''}. Rookie years are flagged when known; 2nd-year status isn't tracked automatically, so double-check.</div>
+      <div class="toggle-row">
+        <button class="toggle-btn${state.ui.exemptSort==='position'?' active':''}" data-esort="position">By Position</button>
+        <button class="toggle-btn${state.ui.exemptSort==='salary'?' active':''}" data-esort="salary">By Salary</button>
+      </div>
+      <div class="list">${rows}</div>
+      ${previewHtml}
+      <div id="exemptErrBox"></div>
+    </div>`;
+}
+function fmtRemaining(ms){
+  const totalHrs = Math.floor(ms/3.6e6), days = Math.floor(totalHrs/24), hrs = totalHrs%24;
+  return days>0 ? `${days}d ${hrs}h remaining` : `${hrs}h remaining`;
+}
+function attachExemptHandlers(){
+  document.querySelectorAll('[data-esort]').forEach(btn => {
+    btn.addEventListener('click', () => { state.ui.exemptSort = btn.getAttribute('data-esort'); render(); });
+  });
+  document.querySelectorAll('[data-player]').forEach(row => {
+    row.addEventListener('click', () => { state.ui.exemptSelectedPlayer = row.getAttribute('data-player'); render(); });
+  });
+  const submitBtn = document.getElementById('exemptSubmitBtn');
+  if (submitBtn){
+    submitBtn.addEventListener('click', async () => {
+      const pinInput = document.getElementById('exemptPinInput');
+      state.ui.exemptPin = pinInput.value.trim();
+      if (!state.ui.exemptPin){
+        document.getElementById('exemptErrBox').innerHTML = `<div class="err-box">Enter your PIN to confirm.</div>`;
+        return;
+      }
+      submitBtn.disabled = true; submitBtn.textContent = 'Submitting…';
+      try {
+        await post({ action:'submitExempt', team: state.selectedTeam, pin: state.ui.exemptPin, player: state.ui.exemptSelectedPlayer });
+        state.data.exemptSelections = await get('exemptstatus');
+        document.getElementById('exemptErrBox').innerHTML = '';
+        render();
+      } catch (err){
+        document.getElementById('exemptErrBox').innerHTML = `<div class="err-box"><b>Submission failed:</b> ${err.message}</div>`;
+        submitBtn.disabled = false; submitBtn.textContent = 'Lock In Pick';
+      }
+    });
+  }
+}
+
+/* =====================================================================
+   COMMISSIONER (Checklist + CBS Queue), PIN-gated
+   ===================================================================== */
+function renderCommish(){
+  if (!state.ui.commissioner){
+    return `
+      <div class="card">
+        <div class="card-head">
+          <p class="eyebrow">Commissioner Only</p>
+          <h1>Unlock Tools</h1>
+          <p class="subtext">Enter a commissioner PIN to view the Exempt Checklist and CBS Update Queue.</p>
+        </div>
+        <label>Your team</label>
+        <select class="plain" id="commishTeamSelect">${(state.data.salaryCap?.teams||[]).map(t=>`<option value="${t.team}">${t.team}</option>`).join('')}</select>
+        <label>Commissioner PIN</label>
+        <input class="plain" type="password" inputmode="numeric" id="commishPinInput" placeholder="PIN">
+        <div class="confirm-wrap"><button class="primary-btn" id="commishUnlockBtn">Unlock</button></div>
+        <p class="field-err" id="commishErr"></p>
+      </div>`;
+  }
+
+  const exempt = state.data.exemptSelections.selections;
+  const checklist = state.data.checklist.checklist;
+  const ds = deadlineState();
+  const deadlinePassed = ds.state === 'closed';
+  const doneByTeam = {}; checklist.forEach(c => { if (c.done) doneByTeam[c.team] = c; });
+
+  const byTeam = {}; exempt.forEach(s => byTeam[s.team] = s);
+  const allTeams = (state.data.salaryCap?.teams||[]).map(t=>t.team);
+  let submitted=0, missed=0;
+  const checklistRows = allTeams.map(team => {
+    const sel = byTeam[team]; const sub = !!sel;
+    if (sub) submitted++; else if (deadlinePassed) missed++;
+    return { team, sel };
+  }).sort((a,b) => { const as=!!a.sel,bs=!!b.sel; if(as!==bs) return as?1:-1; return a.team.localeCompare(b.team); });
+
+  const checklistHtml = checklistRows.map(r => {
+    const sub = !!r.sel;
+    return `
+      <div class="row">
+        <span style="width:9px;height:9px;border-radius:50%;flex:none;background:${sub?'var(--good)':'var(--over)'};"></span>
+        <div class="rname"><span class="n">${r.team}</span><div class="t">${sub ? 'Selected: '+r.sel.player : (deadlinePassed?'No selection — forfeited':'Awaiting submission')}</div></div>
+        <span class="tag ${sub?'':'over'}" style="${sub?'background:rgba(63,125,84,.15);color:var(--good);':''}">${sub?'Submitted':(deadlinePassed?'Missed':'Pending')}</span>
+      </div>`;
+  }).join('');
+
+  const relevant = deadlinePassed ? exempt : [];
+  const pending = relevant.filter(s => !doneByTeam[s.team]);
+  const done = relevant.filter(s => doneByTeam[s.team]);
+
+  let queueHtml;
+  if (!deadlinePassed){
+    queueHtml = `<div class="placeholder">The exempt deadline hasn't passed yet — this queue fills in once selections are final.</div>`;
+  } else if (relevant.length === 0){
+    queueHtml = `<div class="all-clear"><div class="big">✓</div>No exempt selections were submitted this season.</div>`;
+  } else {
+    let h = '';
+    if (pending.length){
+      h += pending.map(s => `
+        <div class="row">
+          <div class="rname"><span class="n">${s.team}</span><div class="t">Exempt: <b>${s.player}</b></div></div>
+          <button class="refresh" data-mark="${s.team}" style="border-color:var(--good);color:var(--good);">Mark Done</button>
+        </div>`).join('');
+    } else {
+      h += `<div class="all-clear"><div class="big">✓</div>All caught up.</div>`;
+    }
+    if (done.length){
+      h += `<p class="eyebrow" style="padding:14px 22px 0;">Completed</p>`;
+      h += done.map(s => `
+        <div class="row" style="opacity:.65;">
+          <span style="color:var(--good);">✓</span>
+          <div class="rname"><span class="n" style="text-decoration:line-through;">${s.team}</span> — ${s.player}</div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);">by ${doneByTeam[s.team].completedBy||'—'}</span>
+        </div>`).join('');
+    }
+    queueHtml = h;
+  }
+
+  return `
+    <div class="card">
+      <div class="card-head">
+        <p class="eyebrow">Commissioner</p>
+        <h1>Exempt Checklist</h1>
+      </div>
+      <div class="summary-row">
+        <div class="summary-chip submitted"><div class="num">${submitted}</div><div class="lbl">Submitted</div></div>
+        <div class="summary-chip pending"><div class="num">${allTeams.length-submitted-missed}</div><div class="lbl">Not Yet</div></div>
+        <div class="summary-chip missed"><div class="num">${missed}</div><div class="lbl">Missed</div></div>
+      </div>
+      <div class="deadline-banner ${ds.state}">${ds.state==='closed'?'Deadline passed':ds.label}</div>
+      <div class="list">${checklistHtml}</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><p class="eyebrow">Commissioner</p><h1>CBS Update Queue</h1><p class="subtext">Locked-in picks still needing the manual $0 update in CBS.</p></div>
+      <div class="list">${queueHtml}</div>
+      <div id="cbsErrBox"></div>
+      <div class="card-foot"><span>SOURCE: ExemptSelections · Checklist</span><button class="refresh" id="switchAccountBtn">Switch account</button></div>
+    </div>`;
+}
+
+function attachCommishHandlers(){
+  const unlockBtn = document.getElementById('commishUnlockBtn');
+  if (unlockBtn){
+    unlockBtn.addEventListener('click', () => {
+      const team = document.getElementById('commishTeamSelect').value;
+      const pin = document.getElementById('commishPinInput').value.trim();
+      if (!team || !pin){
+        const e = document.getElementById('commishErr'); e.className='field-err show'; e.textContent='Select a team and enter a PIN.';
+        return;
+      }
+      state.ui.commissioner = { team, pin };
+      render();
+    });
+  }
+  const switchBtn = document.getElementById('switchAccountBtn');
+  if (switchBtn) switchBtn.addEventListener('click', () => { state.ui.commissioner = null; render(); });
+
+  document.querySelectorAll('[data-mark]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const targetTeam = btn.getAttribute('data-mark');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        await post({ action:'markChecklistDone', team: state.ui.commissioner.team, pin: state.ui.commissioner.pin, targetTeam });
+        state.data.checklist = await get('checklist');
+        render();
+      } catch (err){
+        document.getElementById('cbsErrBox').innerHTML = `<div class="err-box"><b>Could not mark complete:</b> ${err.message}</div>`;
+        btn.disabled = false; btn.textContent = 'Mark Done';
+      }
+    });
+  });
+}
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+render();
+refreshAll(true);
+setInterval(() => refreshAll(false), POLL_MS);
+</script>
+</body>
+</html>
