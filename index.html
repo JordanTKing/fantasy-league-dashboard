@@ -21,11 +21,10 @@
     background: repeating-linear-gradient(90deg, var(--field-line) 0 2px, transparent 2px 64px), var(--field);
     font-family:'Inter',sans-serif; color:var(--ink); min-height:100vh;
     display:flex; justify-content:center;
-    padding:20px 14px 90px;
+    padding:20px 14px 92px;
   }
   .app{ width:100%; max-width:460px; }
 
-  /* ---- top status ---- */
   .status{
     display:flex; align-items:center; justify-content:space-between;
     padding:0 4px 12px; color:#cfd8ce; font-family:'IBM Plex Mono',monospace;
@@ -37,14 +36,18 @@
   .dot.err{ background:#e05c48; box-shadow:0 0 0 3px rgba(224,92,72,.18); }
   @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.4;} }
 
-  /* ---- shared team picker (Team/Picks/Exempt tabs) ---- */
-  .team-picker{ margin-bottom:12px; }
+  .team-picker{ margin-bottom:12px; display:flex; gap:8px; }
   .team-picker select{
-    width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line);
+    flex:1; padding:10px 12px; border-radius:10px; border:1px solid var(--line);
     background:var(--paper); font-family:'Inter',sans-serif; font-size:13.5px; color:var(--ink);
   }
+  .commish-pill{
+    flex:none; padding:10px 12px; border-radius:10px; border:1px solid var(--line);
+    background:var(--paper); font-family:'IBM Plex Mono',monospace; font-size:11px;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .commish-pill.active{ background:var(--brass); color:#3b2c0e; border-color:var(--brass); }
 
-  /* ---- card shell ---- */
   .card{
     background:var(--paper); border-radius:18px;
     box-shadow:0 24px 48px -18px rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.4) inset;
@@ -63,7 +66,6 @@
   }
   .subtext{ font-size:12px; color:var(--ink-soft); margin:6px 0 0; line-height:1.5; }
 
-  /* ---- generic sort/tab row ---- */
   .toggle-row{ display:flex; gap:6px; padding:12px 22px 0; }
   .toggle-btn{
     flex:1; padding:8px 8px; border-radius:8px; border:1px solid var(--line);
@@ -82,7 +84,6 @@
   }
   .u-tab.active{ color:var(--ink); border-bottom-color:var(--brass); }
 
-  /* ---- cap gauge (My Team) ---- */
   .gauge-wrap{ display:flex; align-items:center; gap:18px; padding:20px 22px; border-bottom:1px dashed var(--line); }
   .gauge{ position:relative; width:104px; height:104px; flex:none; }
   .gauge svg{ transform:rotate(-90deg); }
@@ -97,7 +98,17 @@
   .cap-row .v.over{ color:var(--over); }
   .cap-divider{ height:1px; background:var(--line); margin:2px 0; }
 
-  /* ---- position colors (shared) ---- */
+  .cap-summary{
+    padding:16px 22px; display:flex; gap:14px; align-items:center;
+    border-bottom:1px dashed var(--line);
+  }
+  .cap-block{ flex:1; text-align:center; }
+  .cap-block .lbl{ font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); }
+  .cap-block .val{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:20px; margin-top:2px; }
+  .cap-block .val.good{ color:var(--good); }
+  .cap-block .val.over{ color:var(--over); }
+  .cap-arrow{ font-size:18px; color:var(--ink-soft); flex:none; }
+
   .pos{
     font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:10.5px;
     width:28px; height:28px; border-radius:7px; color:var(--paper);
@@ -114,6 +125,9 @@
   .row.selected{ background:rgba(201,162,75,.16); border:1.5px solid var(--brass); }
   .row.is-exempt{ background:rgba(201,162,75,.12); }
   .row.mine{ background:rgba(201,162,75,.14); }
+  .row.removing{ background:rgba(179,64,47,.1); text-decoration:line-through; opacity:.7; }
+  .row.adding{ background:rgba(63,125,84,.1); }
+  .row.clickable{ cursor:pointer; }
   .rname{ flex:1; min-width:0; }
   .rname .n{ font-weight:600; font-size:14px; }
   .rname .t{ font-size:11px; color:var(--ink-soft); }
@@ -132,6 +146,9 @@
     font-weight:500; margin-left:0;
   }
   .tag.team.fa{ font-style:italic; }
+  .action-icon{ flex:none; font-size:15px; width:18px; text-align:center; }
+  .action-icon.remove{ color:var(--over); }
+  .action-icon.add{ color:var(--good); }
 
   .bar-bg{ height:5px; border-radius:3px; background:var(--line); margin-top:5px; overflow:hidden; }
   .bar-fill{ height:100%; border-radius:3px; }
@@ -185,6 +202,7 @@
   }
   .primary-btn:hover{ opacity:.92; }
   .primary-btn:disabled{ opacity:.45; cursor:default; }
+  .primary-btn.margined{ margin:16px 22px 20px; width:calc(100% - 44px); }
   .pin-row{ display:flex; gap:8px; padding:0 22px 14px; }
   .pin-row input{
     flex:1; padding:10px 12px; border-radius:9px; border:1px solid var(--line);
@@ -210,6 +228,92 @@
     display:flex; align-items:center; justify-content:center; flex:none; line-height:1;
   }
 
+  .status-banner{ padding:14px 22px; font-size:13px; line-height:1.5; display:flex; align-items:center; gap:10px; }
+  .status-banner.paid{ background:#e7efe6; color:#2f5b3f; }
+  .status-banner.owed{ background:#f7e3de; color:#7a2c1f; }
+  .status-banner .icon{ font-size:18px; flex:none; }
+  .paid-pill{
+    font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.04em; text-transform:uppercase;
+    padding:3px 9px; border-radius:20px; flex:none;
+  }
+  .paid-pill.yes{ background:rgba(63,125,84,.15); color:var(--good); }
+  .paid-pill.no{ background:rgba(179,64,47,.12); color:var(--over); }
+  .paid-toggle{
+    font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.03em; text-transform:uppercase;
+    padding:5px 10px; border-radius:20px; flex:none; cursor:pointer; border:1px solid;
+  }
+  .paid-toggle.yes{ background:rgba(63,125,84,.12); color:var(--good); border-color:var(--good); }
+  .paid-toggle.no{ background:rgba(179,64,47,.1); color:var(--over); border-color:var(--over); }
+  .pot-box{ margin:8px 22px 4px; padding:14px 16px; background:var(--paper-dim); border-radius:12px; border:1px dashed var(--brass-deep); }
+  .pot-row{ display:flex; justify-content:space-between; font-size:12.5px; padding:2px 0; }
+  .pot-row .k{ color:var(--ink-soft); }
+  .pot-row .v{ font-family:'IBM Plex Mono',monospace; font-weight:600; }
+  .pot-note{ font-size:10.5px; color:var(--ink-soft); margin-top:6px; line-height:1.4; }
+
+  table.standings{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.standings th{
+    text-align:left; padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px;
+    letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); border-bottom:1px solid var(--line);
+  }
+  table.standings td{ padding:9px 10px; border-bottom:1px solid var(--paper-dim); }
+  table.standings tr:last-child td{ border-bottom:none; }
+  table.standings td.place{ font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:15px; width:24px; }
+  table.standings td.team{ font-weight:600; }
+  table.standings td.num{ font-family:'IBM Plex Mono',monospace; text-align:right; }
+  tr.champ td.place{ color:var(--brass-deep); }
+  tr.champ td.team::after{ content:' 🏆'; }
+
+  .matchup{ margin:0 22px 12px; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .matchup.decided{ border-color:var(--brass); }
+  .mteam{ display:flex; align-items:center; gap:10px; padding:10px 14px; }
+  .mteam.winner{ background:rgba(201,162,75,.14); font-weight:700; }
+  .mteam .tname{ flex:1; font-size:13.5px; }
+  .mteam .tscore{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:14px; flex:none; }
+  .mteam .trophy{ margin-left:4px; }
+  .mdivider{ height:1px; background:var(--line); }
+  .bye-note{
+    margin:0 22px 12px; padding:12px 14px; border:1px dashed var(--line); border-radius:12px;
+    font-size:12px; color:var(--ink-soft); text-align:center;
+  }
+  .round-label{
+    padding:14px 22px 8px; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--brass-deep);
+  }
+  .edit-matchup{ margin:0 22px 12px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; }
+  .edit-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .edit-row:last-child{ margin-bottom:0; }
+  .edit-row .tname{ flex:1; font-size:13px; font-weight:600; }
+  .edit-row input[type=number]{
+    width:54px; padding:6px 8px; border-radius:7px; border:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:center;
+  }
+  .edit-row .winner-check{ flex:none; }
+  select.plain, input.plain{
+    margin:0 22px; width:calc(100% - 44px); padding:10px 12px; border-radius:9px;
+    border:1px solid var(--line); background:#fff; font-family:'Inter',sans-serif;
+    font-size:14px; color:var(--ink);
+  }
+  .seed-grid{ padding:0 22px; display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+  .seed-grid label{ font-size:11px; color:var(--ink-soft); display:block; margin-bottom:3px; }
+
+  .filters{ padding:12px 22px 0; display:flex; gap:8px; flex-wrap:wrap; }
+  .filters select, .filters input{
+    padding:8px 10px; border-radius:8px; border:1px solid var(--line);
+    background:#fff; font-family:'Inter',sans-serif; font-size:12.5px; color:var(--ink);
+  }
+  .filters .search{ flex:1; min-width:120px; }
+  .filters select{ flex:none; }
+
+  .section-label{
+    padding:14px 22px 4px; font-family:'IBM Plex Mono',monospace; font-size:10px;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .reset-link{
+    background:none; border:none; color:var(--brass-deep); font-family:'IBM Plex Mono',monospace;
+    font-size:10px; text-decoration:underline; cursor:pointer; padding:0;
+  }
+
   .card-foot{
     padding:12px 22px 18px; display:flex; justify-content:space-between; align-items:center;
     font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--ink-soft);
@@ -221,30 +325,24 @@
   }
   .refresh:disabled{ opacity:.5; }
 
-  /* ---- bottom nav ---- */
-  .bottom-nav{
-    position:fixed; bottom:0; left:0; right:0; background:var(--paper);
-    border-top:1px solid var(--line); display:flex; justify-content:center;
-    box-shadow:0 -8px 24px rgba(0,0,0,.3); z-index:10;
-  }
-  .bottom-nav-inner{ width:100%; max-width:460px; display:flex; }
-  .nav-btn{
-    flex:1; border:none; background:none; padding:10px 2px 8px; cursor:pointer;
-    display:flex; flex-direction:column; align-items:center; gap:3px;
-    font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--ink-soft);
-    letter-spacing:.02em;
-  }
-  .nav-btn .ic{ font-size:17px; line-height:1; }
-  .nav-btn.active{ color:var(--brass-deep); }
-
   .field-err{ color:var(--over); font-size:12px; margin:8px 22px 0; display:none; }
   .field-err.show{ display:block; }
   label{ display:block; font-size:12px; color:var(--ink-soft); margin:12px 22px 4px; }
-  select.plain, input.plain{
-    margin:0 22px; width:calc(100% - 44px); padding:10px 12px; border-radius:9px;
-    border:1px solid var(--line); background:#fff; font-family:'Inter',sans-serif;
-    font-size:14px; color:var(--ink);
+
+  .bottom-nav{
+    position:fixed; bottom:0; left:0; right:0; background:var(--paper);
+    border-top:1px solid var(--line); box-shadow:0 -8px 24px rgba(0,0,0,.3); z-index:10;
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
   }
+  .bottom-nav-inner{ display:flex; width:max-content; min-width:100%; margin:0 auto; }
+  .nav-btn{
+    flex:none; width:64px; border:none; background:none; padding:10px 2px 8px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:var(--ink-soft);
+    letter-spacing:.01em; white-space:nowrap;
+  }
+  .nav-btn .ic{ font-size:16px; line-height:1; }
+  .nav-btn.active{ color:var(--brass-deep); }
 </style>
 </head>
 <body>
@@ -257,6 +355,7 @@
 
   <div class="team-picker" id="teamPickerWrap" style="display:none;">
     <select id="teamSelect"></select>
+    <button class="commish-pill" id="commishToggleBtn">🛠️</button>
   </div>
 
   <div id="viewRoot"></div>
@@ -267,17 +366,19 @@
 </div>
 
 <script>
-/* =====================================================================
-   SHARED STATE & DATA LAYER
-   ===================================================================== */
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbxVGwkt88noCmju0w9z8RhJdWFBSx9TMjJOZPp2MHpIpXQ006WG69kWyMxGKveprg-RMg/exec";
 const POLL_MS = 75000;
 const POSITION_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3, K: 4, DST: 5 };
+const TEAM_TABS = ['team', 'picks', 'exempt', 'whatif'];
+const COMMISH_TABS = ['dues', 'standings', 'commish'];
 
 const state = {
   activeTab: 'team',
   selectedTeam: null,
-  data: { salaryCap: null, roster: null, exemptSelections: null, checklist: null, config: null, draftPicks: null, movers: null },
+  data: {
+    salaryCap: null, roster: null, exemptSelections: null, checklist: null, config: null,
+    draftPicks: null, movers: null, allPlayers: null, duesPayouts: null, standings: null, bracket: null,
+  },
   ui: {
     teamSort: 'position',
     exemptSort: 'position',
@@ -286,7 +387,15 @@ const state = {
     draftYear: '2026',
     moversView: 'gainers',
     leagueSort: 'cap',
-    commissioner: null, // { team, pin }
+    commissioner: null,
+    whatIfRemoved: new Set(),
+    whatIfAdded: [],
+    whatIfSearch: '',
+    whatIfTeamFilter: 'all',
+    whatIfPosFilter: 'all',
+    standingsView: 'standings',
+    bracketEditMode: false,
+    bracketDraft: null,
   },
 };
 
@@ -303,26 +412,30 @@ async function post(body){
   if (data.error) throw new Error(data.error);
   return data;
 }
-function fmtMoney(n){ return '$' + Number(n).toLocaleString(); }
+function fmtMoney(n){ return typeof n === 'number' ? '$' + n.toLocaleString() : '—'; }
 function posRank(pos){ const p=(pos||'').toUpperCase(); return POSITION_ORDER.hasOwnProperty(p)?POSITION_ORDER[p]:99; }
 function posClass(pos){
   const p=(pos||'').toUpperCase();
   return ['QB','RB','WR','TE','K','DST'].includes(p) ? 'pos-'+p : 'pos-other';
+}
+function sortedRoster(roster, mode){
+  const list = [...roster];
+  if (mode === 'salary') list.sort((a,b) => b.salary - a.salary);
+  else list.sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
+  return list;
 }
 
 const dot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 function setStatus(s, t){ dot.className='dot '+s; statusText.textContent=t; }
 
-/* =====================================================================
-   POLLING — fetch everything shared across tabs every cycle
-   ===================================================================== */
 async function refreshAll(isInitial){
   setStatus('pending', isInitial ? 'connecting…' : 'syncing…');
   try {
-    const [cap, exempt, checklist, config, draft, movers] = await Promise.all([
+    const [cap, exempt, checklist, config, draft, movers, allPlayers, dues, standings, bracket] = await Promise.all([
       get('salarycap'), get('exemptstatus'), get('checklist'), get('config'),
-      get('draftpicks'), get('moversshakers'),
+      get('draftpicks'), get('moversshakers'), get('allplayers'), get('duespayouts'),
+      get('standings'), get('bracket'),
     ]);
     state.data.salaryCap = cap;
     state.data.exemptSelections = exempt;
@@ -330,6 +443,10 @@ async function refreshAll(isInitial){
     state.data.config = config;
     state.data.draftPicks = draft;
     state.data.movers = movers;
+    state.data.allPlayers = allPlayers;
+    state.data.duesPayouts = dues;
+    state.data.standings = standings;
+    state.data.bracket = bracket.bracket;
 
     if (isInitial){
       state.selectedTeam = cap.teams[0].team;
@@ -338,7 +455,7 @@ async function refreshAll(isInitial){
       sel.value = state.selectedTeam;
     }
 
-    if (['team','picks','exempt'].includes(state.activeTab) && state.selectedTeam){
+    if (TEAM_TABS.includes(state.activeTab) && state.selectedTeam){
       state.data.roster = await get('roster', { team: state.selectedTeam });
     }
 
@@ -353,11 +470,11 @@ async function refreshAll(isInitial){
 
 function showError(msg){
   const root = document.getElementById('viewRoot');
+  const existing = root.querySelector('.err-box');
+  if (existing) existing.remove();
   const box = document.createElement('div');
   box.className = 'err-box';
   box.innerHTML = `<b>Sync issue:</b> ${msg}`;
-  const existing = root.querySelector('.err-box');
-  if (existing) existing.remove();
   root.prepend(box);
 }
 function clearError(){
@@ -367,22 +484,39 @@ function clearError(){
 
 document.getElementById('teamSelect').addEventListener('change', async (e) => {
   state.selectedTeam = e.target.value;
-  if (['team','picks','exempt'].includes(state.activeTab)){
+  if (TEAM_TABS.includes(state.activeTab)){
     state.data.roster = await get('roster', { team: state.selectedTeam });
   }
   state.ui.exemptSelectedPlayer = null;
+  state.ui.whatIfRemoved = new Set();
+  state.ui.whatIfAdded = [];
   render();
 });
 
-/* =====================================================================
-   NAVIGATION
-   ===================================================================== */
+document.getElementById('commishToggleBtn').addEventListener('click', () => {
+  if (state.ui.commissioner){
+    state.ui.commissioner = null;
+    state.ui.bracketEditMode = false;
+    document.getElementById('commishToggleBtn').classList.remove('active');
+    render();
+    return;
+  }
+  const pin = prompt('Commissioner PIN:');
+  if (!pin) return;
+  state.ui.commissioner = { pin };
+  document.getElementById('commishToggleBtn').classList.add('active');
+  render();
+});
+
 const TABS = [
   { id: 'team', icon: '🏈', label: 'Team' },
   { id: 'league', icon: '📊', label: 'League' },
   { id: 'picks', icon: '🎯', label: 'Picks' },
   { id: 'movers', icon: '📈', label: 'Movers' },
   { id: 'exempt', icon: '🔖', label: 'Exempt' },
+  { id: 'whatif', icon: '🔮', label: 'What-If' },
+  { id: 'dues', icon: '💵', label: 'Dues' },
+  { id: 'standings', icon: '🏆', label: 'Standings' },
   { id: 'commish', icon: '🛠️', label: 'Commish' },
 ];
 
@@ -393,7 +527,7 @@ document.getElementById('bottomNav').innerHTML = TABS.map(t =>
 document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
     state.activeTab = btn.getAttribute('data-tab');
-    if (['team','picks','exempt'].includes(state.activeTab) && !state.data.roster){
+    if (TEAM_TABS.includes(state.activeTab) && !state.data.roster){
       state.data.roster = await get('roster', { team: state.selectedTeam });
     }
     render();
@@ -401,13 +535,12 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 });
 
 function updateTeamPickerVisibility(){
-  const show = ['team','picks','exempt'].includes(state.activeTab);
-  document.getElementById('teamPickerWrap').style.display = show ? 'block' : 'none';
+  const showTeamSelect = TEAM_TABS.includes(state.activeTab);
+  const showCommishPill = COMMISH_TABS.includes(state.activeTab);
+  document.getElementById('teamPickerWrap').style.display = (showTeamSelect || showCommishPill) ? 'flex' : 'none';
+  document.getElementById('teamSelect').style.display = showTeamSelect ? 'block' : 'none';
 }
 
-/* =====================================================================
-   RENDER DISPATCH
-   ===================================================================== */
 function render(){
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === state.activeTab));
   updateTeamPickerVisibility();
@@ -418,18 +551,11 @@ function render(){
     case 'picks': root.innerHTML = renderDraftPicks(); attachDraftHandlers(); break;
     case 'movers': root.innerHTML = renderMovers(); attachMoversHandlers(); break;
     case 'exempt': root.innerHTML = renderExempt(); attachExemptHandlers(); break;
+    case 'whatif': root.innerHTML = renderWhatIf(); attachWhatIfHandlers(); break;
+    case 'dues': root.innerHTML = renderDues(); attachDuesHandlers(); break;
+    case 'standings': root.innerHTML = renderStandingsTab(); attachStandingsHandlers(); break;
     case 'commish': root.innerHTML = renderCommish(); attachCommishHandlers(); break;
   }
-}
-
-/* =====================================================================
-   MY TEAM
-   ===================================================================== */
-function sortedRoster(roster, mode){
-  const list = [...roster];
-  if (mode === 'salary') list.sort((a,b) => b.salary - a.salary);
-  else list.sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
-  return list;
 }
 
 function renderMyTeam(){
@@ -490,7 +616,6 @@ function renderMyTeam(){
       <div class="card-foot"><span>SOURCE: ${roster.salaryTabUsed}</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
     </div>`;
 }
-
 function attachMyTeamHandlers(){
   document.querySelectorAll('[data-sort]').forEach(btn => {
     btn.addEventListener('click', () => { state.ui.teamSort = btn.getAttribute('data-sort'); render(); });
@@ -499,9 +624,6 @@ function attachMyTeamHandlers(){
   if (rb) rb.addEventListener('click', () => refreshAll(false));
 }
 
-/* =====================================================================
-   LEAGUE OVERVIEW
-   ===================================================================== */
 function renderLeague(){
   const cap = state.data.salaryCap;
   if (!cap) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
@@ -552,9 +674,6 @@ function attachLeagueHandlers(){
   if (rb) rb.addEventListener('click', () => refreshAll(false));
 }
 
-/* =====================================================================
-   DRAFT PICKS
-   ===================================================================== */
 function renderDraftPicks(){
   const draft = state.data.draftPicks;
   if (!draft) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
@@ -598,9 +717,6 @@ function attachDraftHandlers(){
   if (rb) rb.addEventListener('click', () => refreshAll(false));
 }
 
-/* =====================================================================
-   MOVERS & SHAKERS
-   ===================================================================== */
 function renderMovers(){
   const m = state.data.movers;
   if (!m) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
@@ -646,9 +762,6 @@ function attachMoversHandlers(){
   if (rb) rb.addEventListener('click', () => refreshAll(false));
 }
 
-/* =====================================================================
-   SALARY EXEMPT SELECTION
-   ===================================================================== */
 function deadlineState(){
   const config = state.data.config;
   if (!config || !config.exemptDeadline) return { state:'open', label:'No deadline set yet', ms:null };
@@ -658,6 +771,10 @@ function deadlineState(){
   if (ms <= 0) return { state:'closed', label:'Deadline passed', ms };
   const hrs = ms / 3.6e6;
   return { state: hrs<24?'soon':'open', label:'Deadline: '+d.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}), ms };
+}
+function fmtRemaining(ms){
+  const totalHrs = Math.floor(ms/3.6e6), days = Math.floor(totalHrs/24), hrs = totalHrs%24;
+  return days>0 ? `${days}d ${hrs}h remaining` : `${hrs}h remaining`;
 }
 
 function renderExempt(){
@@ -684,7 +801,7 @@ function renderExempt(){
   const rows = sorted.map(p => {
     const sel = state.ui.exemptSelectedPlayer === p.player;
     return `
-      <div class="row${sel?' selected':''}" data-player="${p.player}">
+      <div class="row clickable${sel?' selected':''}" data-player="${p.player}">
         <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
         <span class="rname"><span class="n">${p.player}${p.isRookie?'<span class="tag rookie">ROOKIE</span>':''}</span><span class="t"> · ${p.nflTeam||'—'}</span></span>
         <span class="rsal">$${p.salary}</span>
@@ -723,10 +840,6 @@ function renderExempt(){
       <div id="exemptErrBox"></div>
     </div>`;
 }
-function fmtRemaining(ms){
-  const totalHrs = Math.floor(ms/3.6e6), days = Math.floor(totalHrs/24), hrs = totalHrs%24;
-  return days>0 ? `${days}d ${hrs}h remaining` : `${hrs}h remaining`;
-}
 function attachExemptHandlers(){
   document.querySelectorAll('[data-esort]').forEach(btn => {
     btn.addEventListener('click', () => { state.ui.exemptSort = btn.getAttribute('data-esort'); render(); });
@@ -757,25 +870,427 @@ function attachExemptHandlers(){
   }
 }
 
-/* =====================================================================
-   COMMISSIONER (Checklist + CBS Queue), PIN-gated
-   ===================================================================== */
+function computeHypotheticalTotal(){
+  const info = state.data.salaryCap.teams.find(t => t.team === state.selectedTeam);
+  const baseTotal = info ? info.totalSalary : 0;
+  let removedSum = 0;
+  state.data.roster.roster.forEach(p => { if (state.ui.whatIfRemoved.has(p.player)) removedSum += p.salary; });
+  let addedSum = state.ui.whatIfAdded.reduce((s,p) => s + p.salary, 0);
+  return { baseTotal, hypTotal: baseTotal - removedSum + addedSum, cap: info ? info.cap : 200 };
+}
+
+function renderWhatIf(){
+  if (!state.data.roster || !state.data.allPlayers) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
+
+  const { baseTotal, hypTotal, cap } = computeHypotheticalTotal();
+  const overCap = hypTotal > cap;
+  const space = cap - hypTotal;
+
+  let html = `<div class="card">
+    <div class="card-head">
+      <p class="eyebrow">What-If Tool</p>
+      <h1>${state.selectedTeam||'—'}</h1>
+      <p class="subtext">Model a hypothetical roster. Nothing here is saved anywhere — it's a sandbox to check cap impact before a real move.</p>
+    </div>
+    <div class="cap-summary">
+      <div class="cap-block"><div class="lbl">Current</div><div class="val">${fmtMoney(baseTotal)}</div></div>
+      <div class="cap-arrow">→</div>
+      <div class="cap-block"><div class="lbl">Hypothetical</div><div class="val ${overCap?'over':'good'}">${fmtMoney(hypTotal)}</div></div>
+      <div class="cap-block"><div class="lbl">Cap Space</div><div class="val ${space<0?'over':'good'}">${space<0?'−':''}${fmtMoney(Math.abs(space))}</div></div>
+    </div>`;
+
+  if (state.ui.whatIfAdded.length > 0){
+    html += `<div class="section-label">Added This Scenario</div><div class="list">`;
+    html += state.ui.whatIfAdded.map(p => {
+      const teamTag = p.fantasyTeam
+        ? `<span class="tag team">via ${p.fantasyTeam}</span>`
+        : `<span class="tag team fa">Free Agent</span>`;
+      return `
+        <div class="row adding clickable" data-remove-added="${p.player}">
+          <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
+          <span class="rname"><span class="n">${p.player}${teamTag}</span><span class="t"> · ${p.nflTeam||'—'}</span></span>
+          <span class="rsal">$${p.salary}</span>
+          <span class="action-icon remove">✕</span>
+        </div>`;
+    }).join('');
+    html += `</div>`;
+  }
+
+  html += `<div class="section-label">Your Roster <button class="reset-link" id="resetScenarioBtn">Reset scenario</button></div><div class="list">`;
+  const sortedRosterList = [...state.data.roster.roster].sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
+  html += sortedRosterList.map(p => {
+    const isRemoved = state.ui.whatIfRemoved.has(p.player);
+    return `
+      <div class="row clickable${isRemoved?' removing':''}" data-toggle-remove="${p.player}">
+        <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
+        <span class="rname"><span class="n">${p.player}</span><span class="t"> · ${p.nflTeam||'—'}</span></span>
+        <span class="rsal">$${p.salary}</span>
+        <span class="action-icon remove">${isRemoved?'↺':'✕'}</span>
+      </div>`;
+  }).join('');
+  html += `</div>`;
+
+  html += `<div class="section-label">Add a Player</div>
+    <div class="filters">
+      <input class="search" id="whatIfSearch" placeholder="Search player name…" value="${state.ui.whatIfSearch}">
+      <select id="whatIfTeamFilter">
+        <option value="all"${state.ui.whatIfTeamFilter==='all'?' selected':''}>All / Free Agents</option>
+        <option value="fa"${state.ui.whatIfTeamFilter==='fa'?' selected':''}>Free Agents Only</option>
+        ${state.data.salaryCap.teams.map(t => `<option value="${t.team}"${state.ui.whatIfTeamFilter===t.team?' selected':''}>${t.team}</option>`).join('')}
+      </select>
+      <select id="whatIfPosFilter">
+        <option value="all"${state.ui.whatIfPosFilter==='all'?' selected':''}>All Positions</option>
+        ${['QB','RB','WR','TE','K','DST'].map(p => `<option value="${p}"${state.ui.whatIfPosFilter===p?' selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>
+    <div class="list" id="whatIfAddList"></div>
+    <div class="eligibility-note"><b>Note:</b> this models your team's cap only — if a player comes off another roster, that team would need its own corresponding move.</div>
+    <div id="whatIfErrBox"></div>
+    <div class="card-foot"><span>SOURCE: League Salary Cap · Player Salaries</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
+  </div>`;
+
+  return html;
+}
+
+function renderWhatIfAddList(){
+  const el = document.getElementById('whatIfAddList');
+  if (!el) return;
+  let pool = state.data.allPlayers.players.filter(p => p.fantasyTeam !== state.selectedTeam);
+  const search = state.ui.whatIfSearch.trim().toLowerCase();
+  if (search) pool = pool.filter(p => p.player.toLowerCase().includes(search));
+  if (state.ui.whatIfTeamFilter === 'fa') pool = pool.filter(p => !p.fantasyTeam);
+  else if (state.ui.whatIfTeamFilter !== 'all') pool = pool.filter(p => p.fantasyTeam === state.ui.whatIfTeamFilter);
+  if (state.ui.whatIfPosFilter !== 'all') pool = pool.filter(p => (p.position||'').toUpperCase() === state.ui.whatIfPosFilter);
+  pool.sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
+  pool = pool.slice(0, 40);
+
+  if (pool.length === 0){ el.innerHTML = '<div class="placeholder">No players match these filters.</div>'; return; }
+
+  el.innerHTML = pool.map(p => {
+    const isAdded = state.ui.whatIfAdded.some(a => a.player === p.player);
+    const teamTag = p.fantasyTeam ? `<span class="tag team">${p.fantasyTeam}</span>` : `<span class="tag team fa">Free Agent</span>`;
+    return `
+      <div class="row clickable${isAdded?' adding':''}" data-toggle-add="${p.player}">
+        <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
+        <span class="rname"><span class="n">${p.player}${teamTag}</span><span class="t"> · ${p.nflTeam||'—'}</span></span>
+        <span class="rsal">$${p.salary}</span>
+        <span class="action-icon add">${isAdded?'↺':'+'}</span>
+      </div>`;
+  }).join('');
+
+  el.querySelectorAll('[data-toggle-add]').forEach(row => {
+    row.addEventListener('click', () => {
+      const name = row.getAttribute('data-toggle-add');
+      const idx = state.ui.whatIfAdded.findIndex(a => a.player === name);
+      if (idx !== -1) state.ui.whatIfAdded.splice(idx, 1);
+      else {
+        const p = state.data.allPlayers.players.find(pl => pl.player === name);
+        if (p) state.ui.whatIfAdded.push(p);
+      }
+      render();
+    });
+  });
+}
+
+function attachWhatIfHandlers(){
+  renderWhatIfAddList();
+  document.getElementById('resetScenarioBtn').addEventListener('click', () => {
+    state.ui.whatIfRemoved = new Set(); state.ui.whatIfAdded = []; render();
+  });
+  document.querySelectorAll('[data-toggle-remove]').forEach(row => {
+    row.addEventListener('click', () => {
+      const name = row.getAttribute('data-toggle-remove');
+      if (state.ui.whatIfRemoved.has(name)) state.ui.whatIfRemoved.delete(name);
+      else state.ui.whatIfRemoved.add(name);
+      render();
+    });
+  });
+  document.querySelectorAll('[data-remove-added]').forEach(row => {
+    row.addEventListener('click', () => {
+      const name = row.getAttribute('data-remove-added');
+      state.ui.whatIfAdded = state.ui.whatIfAdded.filter(a => a.player !== name);
+      render();
+    });
+  });
+  document.getElementById('whatIfSearch').addEventListener('input', (e) => { state.ui.whatIfSearch = e.target.value; renderWhatIfAddList(); });
+  document.getElementById('whatIfTeamFilter').addEventListener('change', (e) => { state.ui.whatIfTeamFilter = e.target.value; renderWhatIfAddList(); });
+  document.getElementById('whatIfPosFilter').addEventListener('change', (e) => { state.ui.whatIfPosFilter = e.target.value; renderWhatIfAddList(); });
+  const rb = document.getElementById('refreshBtn');
+  if (rb) rb.addEventListener('click', () => refreshAll(false));
+}
+
+async function togglePaid(section, key, currentlyPaid, btnEl){
+  if (!state.ui.commissioner){ alert('Unlock Commish mode first (top-right pill) to change paid status.'); return; }
+  btnEl.disabled = true;
+  try {
+    await post({ action:'markduespaid', pin: state.ui.commissioner.pin, section, key, paid: !currentlyPaid });
+    state.data.duesPayouts = await get('duespayouts');
+    render();
+  } catch (err) {
+    showError('Could not update paid status: ' + err.message);
+    btnEl.disabled = false;
+  }
+}
+
+function renderDues(){
+  const d = state.data.duesPayouts;
+  if (!d) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
+  const isCommish = !!state.ui.commissioner;
+  const myDues = d.teamDues.find(x => state.selectedTeam && x.team.toLowerCase().includes(state.selectedTeam.toLowerCase()));
+
+  let html = `<div class="card">
+    <div class="card-head"><p class="eyebrow">My Dues</p><h1>${state.selectedTeam||'—'}</h1></div>`;
+  html += myDues
+    ? (myDues.paid
+        ? `<div class="status-banner paid"><span class="icon">✓</span>You're paid up — $${myDues.totalDue} dues settled.</div>`
+        : `<div class="status-banner owed"><span class="icon">!</span>You owe $${myDues.totalDue} in league dues.</div>`)
+    : `<div class="placeholder">Couldn't match your team to a dues row.</div>`;
+  html += `</div>`;
+
+  html += `<div class="card"><div class="card-head"><p class="eyebrow">Team Dues</p><h1>All 12 Teams</h1><p class="subtext">$100 entry + $30 weekly high-score add-on = $130 per team.</p></div><div class="list">`;
+  d.teamDues.forEach(x => {
+    const mine = state.selectedTeam && x.team.toLowerCase().includes(state.selectedTeam.toLowerCase());
+    html += `<div class="row${mine?' mine':''}">
+      <div class="rname"><span class="n">${x.team}</span><span class="t"> · $${x.totalDue} due</span></div>
+      ${isCommish ? `<button class="paid-toggle ${x.paid?'yes':'no'}" data-toggle-team="${x.team}" data-paid="${x.paid}">${x.paid?'Paid':'Unpaid'}</button>` : `<span class="paid-pill ${x.paid?'yes':'no'}">${x.paid?'Paid':'Unpaid'}</span>`}
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  html += `<div class="card"><div class="card-head"><p class="eyebrow">Weekly High Score</p><h1>$25 Pot</h1></div><div class="list">`;
+  d.weeklyHighScore.forEach(w => {
+    html += `<div class="row">
+      <div class="rname"><span class="n">Week ${w.week}</span><span class="t"> · ${w.winner||'Not yet set'}</span></div>
+      <span class="rsal">$${w.amount}</span>
+      ${isCommish ? `<button class="paid-toggle ${w.paid?'yes':'no'}" data-toggle-week="${w.week}" data-paid="${w.paid}">${w.paid?'Paid':'Unpaid'}</button>` : `<span class="paid-pill ${w.paid?'yes':'no'}">${w.paid?'Paid':'Unpaid'}</span>`}
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  html += `<div class="card"><div class="card-head"><p class="eyebrow">Playoffs</p><h1>Payout Pot</h1></div>`;
+  if (d.availablePayoutPot){
+    html += `<div class="pot-box">
+      <div class="pot-row"><span class="k">Anticipated pot</span><span class="v">${fmtMoney(d.availablePayoutPot.anticipated)}</span></div>
+      <div class="pot-row"><span class="k">Actual pot</span><span class="v">${fmtMoney(d.availablePayoutPot.actual)}</span></div>
+      <div class="pot-note">League Dues − High Score Payouts − League Activation Fee</div>
+    </div>`;
+  }
+  html += `<div class="list">`;
+  d.playoffPayout.forEach(p => {
+    html += `<div class="row">
+      <div class="rname"><span class="n">${p.place} Place${p.pct?' · '+Math.round(p.pct*100)+'%':''}</span><span class="t"> · ${p.winner||'TBD'}</span></div>
+      <span class="rsal">${fmtMoney(p.actual)}</span>
+      ${isCommish ? `<button class="paid-toggle ${p.paid?'yes':'no'}" data-toggle-place="${p.place}" data-paid="${p.paid}">${p.paid?'Paid':'Unpaid'}</button>` : `<span class="paid-pill ${p.paid?'yes':'no'}">${p.paid?'Paid':'Unpaid'}</span>`}
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  if (d.miscPayouts.length > 0){
+    html += `<div class="card"><div class="card-head"><p class="eyebrow">Misc</p><h1>Other Payouts</h1></div><div class="list">`;
+    d.miscPayouts.forEach(m => {
+      html += `<div class="row">
+        <div class="rname"><span class="n">${m.what}</span><span class="t"> · ${m.who||'—'}</span></div>
+        <span class="rsal">${fmtMoney(m.amount)}</span>
+        ${isCommish ? `<button class="paid-toggle ${m.paid?'yes':'no'}" data-toggle-misc="${m.what}" data-paid="${m.paid}">${m.paid?'Paid':'Unpaid'}</button>` : `<span class="paid-pill ${m.paid?'yes':'no'}">${m.paid?'Paid':'Unpaid'}</span>`}
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  html += `<div class="card-foot"><span>SOURCE: League Dues/Payouts</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>`;
+  return html;
+}
+
+function attachDuesHandlers(){
+  document.querySelectorAll('[data-toggle-team]').forEach(btn => btn.addEventListener('click', () => togglePaid('teamdues', btn.getAttribute('data-toggle-team'), btn.getAttribute('data-paid')==='true', btn)));
+  document.querySelectorAll('[data-toggle-week]').forEach(btn => btn.addEventListener('click', () => togglePaid('weeklyhighscore', btn.getAttribute('data-toggle-week'), btn.getAttribute('data-paid')==='true', btn)));
+  document.querySelectorAll('[data-toggle-place]').forEach(btn => btn.addEventListener('click', () => togglePaid('playoff', btn.getAttribute('data-toggle-place'), btn.getAttribute('data-paid')==='true', btn)));
+  document.querySelectorAll('[data-toggle-misc]').forEach(btn => btn.addEventListener('click', () => togglePaid('misc', btn.getAttribute('data-toggle-misc'), btn.getAttribute('data-paid')==='true', btn)));
+  const rb = document.getElementById('refreshBtn');
+  if (rb) rb.addEventListener('click', () => refreshAll(false));
+}
+
+function emptyBracket(){
+  return {
+    seeds: {1:'',2:'',3:'',4:'',5:'',6:''},
+    round1: { a: {score1:null,score2:null,winner:null}, b: {score1:null,score2:null,winner:null} },
+    round2: { a: {team1:'',team2:'',score1:null,score2:null,winner:null}, b: {team1:'',team2:'',score1:null,score2:null,winner:null} },
+    championship: {team1:'',team2:'',score1:null,score2:null,winner:null},
+    thirdPlace: {team1:'',team2:'',score1:null,score2:null,winner:null},
+  };
+}
+function bracketTeamName(b, seedNum){ return (b.seeds && b.seeds[seedNum]) || `Seed ${seedNum}`; }
+
+function renderStandingsTab(){
+  let html = `<div class="underline-tabs">
+    <button class="u-tab${state.ui.standingsView==='standings'?' active':''}" data-sview="standings">Standings</button>
+    <button class="u-tab${state.ui.standingsView==='bracket'?' active':''}" data-sview="bracket">Bracket</button>
+  </div>`;
+  if (state.ui.standingsView === 'standings') html += renderStandingsSnapshots();
+  else html += state.ui.bracketEditMode ? renderBracketEdit() : renderBracketReadOnly();
+  return html;
+}
+
+function renderStandingsSnapshots(){
+  const s = state.data.standings;
+  if (!s) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
+  let html = `<div class="card"><div class="card-head"><p class="eyebrow">Snapshot — End of Week 14</p><h1>Regular Season</h1></div>`;
+  if (s.regularSeason.length === 0){
+    html += `<div class="placeholder">Not filled in yet — check back after Week 14.</div>`;
+  } else {
+    html += `<table class="standings"><thead><tr><th></th><th>Team</th><th>Record</th><th>PF</th><th>PA</th></tr></thead><tbody>`;
+    s.regularSeason.forEach(r => { html += `<tr><td class="place">${r.place}</td><td class="team">${r.team}</td><td>${r.record||'—'}</td><td class="num">${r.pointsFor??'—'}</td><td class="num">${r.pointsAgainst??'—'}</td></tr>`; });
+    html += `</tbody></table>`;
+  }
+  html += `</div><div class="card"><div class="card-head"><p class="eyebrow">Snapshot — After Playoffs</p><h1>Final Standings</h1></div>`;
+  if (s.finalStandings.length === 0){
+    html += `<div class="placeholder">Not filled in yet — check back once playoffs conclude.</div>`;
+  } else {
+    html += `<table class="standings"><tbody>`;
+    s.finalStandings.forEach(f => { html += `<tr class="${f.place===1?'champ':''}"><td class="place">${f.place}</td><td class="team">${f.team}</td></tr>`; });
+    html += `</tbody></table>`;
+  }
+  html += `<div class="card-foot"><span>SOURCE: EOY Standings</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div></div>`;
+  return html;
+}
+
+function matchupHtml(team1, team2, g){
+  const decided = g.winner !== null && g.winner !== undefined;
+  const w1 = decided && g.winner === 1;
+  const w2 = decided && g.winner === 2;
+  return `
+    <div class="matchup${decided?' decided':''}">
+      <div class="mteam${w1?' winner':''}"><span class="tname">${team1||'TBD'}</span><span class="tscore">${g.score1??'—'}</span>${w1?'<span class="trophy">✓</span>':''}</div>
+      <div class="mdivider"></div>
+      <div class="mteam${w2?' winner':''}"><span class="tname">${team2||'TBD'}</span><span class="tscore">${g.score2??'—'}</span>${w2?'<span class="trophy">✓</span>':''}</div>
+    </div>`;
+}
+
+function renderBracketReadOnly(){
+  const b = state.data.bracket || emptyBracket();
+  const hasSeeds = b.seeds && Object.values(b.seeds).some(v => v);
+  let html = `<div class="card"><div class="card-head"><p class="eyebrow">Playoffs</p><h1>Bracket</h1><p class="subtext">Entered manually by the commissioner as each round wraps up.</p></div>`;
+  if (!hasSeeds){
+    html += `<div class="placeholder">Bracket hasn't been set up yet.</div></div>`;
+    return html;
+  }
+  html += `<div class="round-label">Round 1 — Week 15</div>`;
+  html += matchupHtml(bracketTeamName(b,3), bracketTeamName(b,6), b.round1.a);
+  html += matchupHtml(bracketTeamName(b,4), bracketTeamName(b,5), b.round1.b);
+  html += `<div class="bye-note">Seeds 1 (${bracketTeamName(b,1)}) and 2 (${bracketTeamName(b,2)}) had first-round byes</div>`;
+  html += `<div class="round-label">Round 2 — Week 16</div><p class="subtext" style="padding:0 22px 8px;">Re-seeded from that week's actual CBS matchups.</p>`;
+  html += matchupHtml(b.round2.a.team1, b.round2.a.team2, b.round2.a);
+  html += matchupHtml(b.round2.b.team1, b.round2.b.team2, b.round2.b);
+  html += `<div class="round-label">Championship — Week 17</div>`;
+  html += matchupHtml(b.championship.team1, b.championship.team2, b.championship);
+  html += `<div class="round-label">Third Place Game — Week 17</div>`;
+  html += matchupHtml(b.thirdPlace.team1, b.thirdPlace.team2, b.thirdPlace);
+  html += `<div class="card-foot"><span>Entered by commissioner</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div></div>`;
+  if (state.ui.commissioner){
+    html += `<button class="primary-btn margined" id="bracketEditToggle">Edit Bracket</button>`;
+  }
+  return html;
+}
+
+function renderBracketEdit(){
+  if (!state.ui.bracketDraft) state.ui.bracketDraft = state.data.bracket && state.data.bracket.seeds ? JSON.parse(JSON.stringify(state.data.bracket)) : emptyBracket();
+  const draft = state.ui.bracketDraft;
+  const teams = state.data.salaryCap.teams.map(t => t.team);
+
+  function seedSelect(n){
+    return `<div><label>Seed ${n}</label><select class="plain" style="margin:0;width:100%;" data-seed="${n}">
+      <option value="">— select —</option>
+      ${teams.map(t => `<option value="${t}" ${draft.seeds[n]===t?'selected':''}>${t}</option>`).join('')}
+    </select></div>`;
+  }
+  function editGameFixed(path, team1Label, team2Label, g){
+    return `<div class="edit-matchup" data-game="${path}">
+      <div class="edit-row"><span class="tname">${team1Label}</span><input type="number" data-score="1" value="${g.score1??''}" placeholder="0"><input type="radio" class="winner-check" name="w-${path}" data-winner="1" ${g.winner===1?'checked':''}></div>
+      <div class="edit-row"><span class="tname">${team2Label}</span><input type="number" data-score="2" value="${g.score2??''}" placeholder="0"><input type="radio" class="winner-check" name="w-${path}" data-winner="2" ${g.winner===2?'checked':''}></div>
+    </div>`;
+  }
+  function editGameFree(path, g){
+    const opt = (val) => `<option value="">— pick team —</option>` + teams.map(t => `<option value="${t}" ${g[val]===t?'selected':''}>${t}</option>`).join('');
+    return `<div class="edit-matchup" data-game="${path}">
+      <div class="edit-row"><select class="plain" data-team="1" style="flex:1;margin:0;">${opt('team1')}</select><input type="number" data-score="1" value="${g.score1??''}" placeholder="0"><input type="radio" class="winner-check" name="w-${path}" data-winner="1" ${g.winner===1?'checked':''}></div>
+      <div class="edit-row"><select class="plain" data-team="2" style="flex:1;margin:0;">${opt('team2')}</select><input type="number" data-score="2" value="${g.score2??''}" placeholder="0"><input type="radio" class="winner-check" name="w-${path}" data-winner="2" ${g.winner===2?'checked':''}></div>
+    </div>`;
+  }
+
+  return `<div class="card">
+    <div class="card-head"><p class="eyebrow">Commissioner Edit Mode</p><h1>Bracket</h1><p class="subtext">Round 1 is fixed by seeding. From Round 2 on, pick the actual matchups CBS shows each week.</p></div>
+    <div class="seed-grid">${[1,2,3,4,5,6].map(seedSelect).join('')}</div>
+    <div class="round-label">Round 1 — Week 15</div>
+    ${editGameFixed('r1a', draft.seeds[3]||'Seed 3', draft.seeds[6]||'Seed 6', draft.round1.a)}
+    ${editGameFixed('r1b', draft.seeds[4]||'Seed 4', draft.seeds[5]||'Seed 5', draft.round1.b)}
+    <div class="round-label">Round 2 — Week 16</div>
+    ${editGameFree('r2a', draft.round2.a)}
+    ${editGameFree('r2b', draft.round2.b)}
+    <div class="round-label">Championship — Week 17</div>
+    ${editGameFree('champ', draft.championship)}
+    <div class="round-label">Third Place Game — Week 17</div>
+    ${editGameFree('third', draft.thirdPlace)}
+    <button class="primary-btn margined" id="saveBracketBtn">Save Bracket</button>
+    <div id="bracketErrBox"></div>
+  </div>`;
+}
+
+function pathToGame(path){
+  const d = state.ui.bracketDraft;
+  if (path === 'r1a') return d.round1.a;
+  if (path === 'r1b') return d.round1.b;
+  if (path === 'r2a') return d.round2.a;
+  if (path === 'r2b') return d.round2.b;
+  if (path === 'champ') return d.championship;
+  if (path === 'third') return d.thirdPlace;
+}
+
+async function saveBracket(){
+  const btn = document.getElementById('saveBracketBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await post({ action:'savebracket', pin: state.ui.commissioner.pin, bracketData: state.ui.bracketDraft });
+    state.data.bracket = JSON.parse(JSON.stringify(state.ui.bracketDraft));
+    state.ui.bracketEditMode = false;
+    render();
+  } catch (err) {
+    document.getElementById('bracketErrBox').innerHTML = `<div class="err-box"><b>Save failed:</b> ${err.message}</div>`;
+    btn.disabled = false; btn.textContent = 'Save Bracket';
+  }
+}
+
+function attachStandingsHandlers(){
+  document.querySelectorAll('[data-sview]').forEach(btn => {
+    btn.addEventListener('click', () => { state.ui.standingsView = btn.getAttribute('data-sview'); state.ui.bracketEditMode = false; render(); });
+  });
+  const editToggle = document.getElementById('bracketEditToggle');
+  if (editToggle) editToggle.addEventListener('click', () => { state.ui.bracketEditMode = true; state.ui.bracketDraft = null; render(); });
+
+  document.querySelectorAll('[data-seed]').forEach(sel => {
+    sel.addEventListener('change', () => { state.ui.bracketDraft.seeds[sel.getAttribute('data-seed')] = sel.value; render(); });
+  });
+  document.querySelectorAll('[data-game]').forEach(box => {
+    const path = box.getAttribute('data-game');
+    const g = pathToGame(path);
+    box.querySelectorAll('[data-score]').forEach(inp => {
+      inp.addEventListener('input', () => { g['score' + inp.getAttribute('data-score')] = inp.value === '' ? null : Number(inp.value); });
+    });
+    box.querySelectorAll('[data-team]').forEach(sel => {
+      sel.addEventListener('change', () => { g['team' + sel.getAttribute('data-team')] = sel.value; });
+    });
+    box.querySelectorAll('[data-winner]').forEach(radio => {
+      radio.addEventListener('change', () => { g.winner = Number(radio.getAttribute('data-winner')); render(); });
+    });
+  });
+  const saveBtn = document.getElementById('saveBracketBtn');
+  if (saveBtn) saveBtn.addEventListener('click', saveBracket);
+  const rb = document.getElementById('refreshBtn');
+  if (rb) rb.addEventListener('click', () => refreshAll(false));
+}
+
 function renderCommish(){
   if (!state.ui.commissioner){
-    return `
-      <div class="card">
-        <div class="card-head">
-          <p class="eyebrow">Commissioner Only</p>
-          <h1>Unlock Tools</h1>
-          <p class="subtext">Enter a commissioner PIN to view the Exempt Checklist and CBS Update Queue.</p>
-        </div>
-        <label>Your team</label>
-        <select class="plain" id="commishTeamSelect">${(state.data.salaryCap?.teams||[]).map(t=>`<option value="${t.team}">${t.team}</option>`).join('')}</select>
-        <label>Commissioner PIN</label>
-        <input class="plain" type="password" inputmode="numeric" id="commishPinInput" placeholder="PIN">
-        <div class="confirm-wrap"><button class="primary-btn" id="commishUnlockBtn">Unlock</button></div>
-        <p class="field-err" id="commishErr"></p>
-      </div>`;
+    return `<div class="card"><div class="card-head"><p class="eyebrow">Commissioner Only</p><h1>Unlock Tools</h1><p class="subtext">Use the 🛠️ pill above to unlock with your commissioner PIN — it applies across Dues, Standings/Bracket, and this checklist.</p></div></div>`;
   }
 
   const exempt = state.data.exemptSelections.selections;
@@ -795,12 +1310,11 @@ function renderCommish(){
 
   const checklistHtml = checklistRows.map(r => {
     const sub = !!r.sel;
-    return `
-      <div class="row">
-        <span style="width:9px;height:9px;border-radius:50%;flex:none;background:${sub?'var(--good)':'var(--over)'};"></span>
-        <div class="rname"><span class="n">${r.team}</span><div class="t">${sub ? 'Selected: '+r.sel.player : (deadlinePassed?'No selection — forfeited':'Awaiting submission')}</div></div>
-        <span class="tag ${sub?'':'over'}" style="${sub?'background:rgba(63,125,84,.15);color:var(--good);':''}">${sub?'Submitted':(deadlinePassed?'Missed':'Pending')}</span>
-      </div>`;
+    return `<div class="row">
+      <span style="width:9px;height:9px;border-radius:50%;flex:none;background:${sub?'var(--good)':'var(--over)'};"></span>
+      <div class="rname"><span class="n">${r.team}</span><div class="t">${sub ? 'Selected: '+r.sel.player : (deadlinePassed?'No selection — forfeited':'Awaiting submission')}</div></div>
+      <span class="tag" style="${sub?'background:rgba(63,125,84,.15);color:var(--good);':'background:rgba(179,64,47,.12);color:var(--over);'}">${sub?'Submitted':(deadlinePassed?'Missed':'Pending')}</span>
+    </div>`;
   }).join('');
 
   const relevant = deadlinePassed ? exempt : [];
@@ -809,38 +1323,33 @@ function renderCommish(){
 
   let queueHtml;
   if (!deadlinePassed){
-    queueHtml = `<div class="placeholder">The exempt deadline hasn't passed yet — this queue fills in once selections are final.</div>`;
+    queueHtml = `<div class="placeholder">The exempt deadline hasn't passed yet.</div>`;
   } else if (relevant.length === 0){
     queueHtml = `<div class="all-clear"><div class="big">✓</div>No exempt selections were submitted this season.</div>`;
   } else {
     let h = '';
     if (pending.length){
-      h += pending.map(s => `
-        <div class="row">
-          <div class="rname"><span class="n">${s.team}</span><div class="t">Exempt: <b>${s.player}</b></div></div>
-          <button class="refresh" data-mark="${s.team}" style="border-color:var(--good);color:var(--good);">Mark Done</button>
-        </div>`).join('');
+      h += pending.map(s => `<div class="row">
+        <div class="rname"><span class="n">${s.team}</span><div class="t">Exempt: <b>${s.player}</b></div></div>
+        <button class="refresh" data-mark="${s.team}" style="border-color:var(--good);color:var(--good);">Mark Done</button>
+      </div>`).join('');
     } else {
       h += `<div class="all-clear"><div class="big">✓</div>All caught up.</div>`;
     }
     if (done.length){
       h += `<p class="eyebrow" style="padding:14px 22px 0;">Completed</p>`;
-      h += done.map(s => `
-        <div class="row" style="opacity:.65;">
-          <span style="color:var(--good);">✓</span>
-          <div class="rname"><span class="n" style="text-decoration:line-through;">${s.team}</span> — ${s.player}</div>
-          <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);">by ${doneByTeam[s.team].completedBy||'—'}</span>
-        </div>`).join('');
+      h += done.map(s => `<div class="row" style="opacity:.65;">
+        <span style="color:var(--good);">✓</span>
+        <div class="rname"><span class="n" style="text-decoration:line-through;">${s.team}</span> — ${s.player}</div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);">by ${doneByTeam[s.team].completedBy||'—'}</span>
+      </div>`).join('');
     }
     queueHtml = h;
   }
 
   return `
     <div class="card">
-      <div class="card-head">
-        <p class="eyebrow">Commissioner</p>
-        <h1>Exempt Checklist</h1>
-      </div>
+      <div class="card-head"><p class="eyebrow">Commissioner</p><h1>Exempt Checklist</h1></div>
       <div class="summary-row">
         <div class="summary-chip submitted"><div class="num">${submitted}</div><div class="lbl">Submitted</div></div>
         <div class="summary-chip pending"><div class="num">${allTeams.length-submitted-missed}</div><div class="lbl">Not Yet</div></div>
@@ -853,46 +1362,29 @@ function renderCommish(){
       <div class="card-head"><p class="eyebrow">Commissioner</p><h1>CBS Update Queue</h1><p class="subtext">Locked-in picks still needing the manual $0 update in CBS.</p></div>
       <div class="list">${queueHtml}</div>
       <div id="cbsErrBox"></div>
-      <div class="card-foot"><span>SOURCE: ExemptSelections · Checklist</span><button class="refresh" id="switchAccountBtn">Switch account</button></div>
+      <div class="card-foot"><span>SOURCE: ExemptSelections · Checklist</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
     </div>`;
 }
 
 function attachCommishHandlers(){
-  const unlockBtn = document.getElementById('commishUnlockBtn');
-  if (unlockBtn){
-    unlockBtn.addEventListener('click', () => {
-      const team = document.getElementById('commishTeamSelect').value;
-      const pin = document.getElementById('commishPinInput').value.trim();
-      if (!team || !pin){
-        const e = document.getElementById('commishErr'); e.className='field-err show'; e.textContent='Select a team and enter a PIN.';
-        return;
-      }
-      state.ui.commissioner = { team, pin };
-      render();
-    });
-  }
-  const switchBtn = document.getElementById('switchAccountBtn');
-  if (switchBtn) switchBtn.addEventListener('click', () => { state.ui.commissioner = null; render(); });
-
   document.querySelectorAll('[data-mark]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const targetTeam = btn.getAttribute('data-mark');
       btn.disabled = true; btn.textContent = 'Saving…';
       try {
-        await post({ action:'markChecklistDone', team: state.ui.commissioner.team, pin: state.ui.commissioner.pin, targetTeam });
+        await post({ action:'markChecklistDone', pin: state.ui.commissioner.pin, targetTeam });
         state.data.checklist = await get('checklist');
         render();
-      } catch (err){
+      } catch (err) {
         document.getElementById('cbsErrBox').innerHTML = `<div class="err-box"><b>Could not mark complete:</b> ${err.message}</div>`;
         btn.disabled = false; btn.textContent = 'Mark Done';
       }
     });
   });
+  const rb = document.getElementById('refreshBtn');
+  if (rb) rb.addEventListener('click', () => refreshAll(false));
 }
 
-/* =====================================================================
-   BOOT
-   ===================================================================== */
 render();
 refreshAll(true);
 setInterval(() => refreshAll(false), POLL_MS);
