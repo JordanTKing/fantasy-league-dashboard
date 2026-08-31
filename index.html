@@ -332,17 +332,45 @@
   .bottom-nav{
     position:fixed; bottom:0; left:0; right:0; background:var(--paper);
     border-top:1px solid var(--line); box-shadow:0 -8px 24px rgba(0,0,0,.3); z-index:10;
-    overflow-x:auto; -webkit-overflow-scrolling:touch;
   }
-  .bottom-nav-inner{ display:flex; width:max-content; min-width:100%; margin:0 auto; }
+  .bottom-nav-inner{ display:flex; justify-content:center; max-width:460px; margin:0 auto; }
   .nav-btn{
-    flex:none; width:64px; border:none; background:none; padding:10px 2px 8px; cursor:pointer;
+    flex:1; border:none; background:none; padding:10px 2px 8px; cursor:pointer;
     display:flex; flex-direction:column; align-items:center; gap:3px;
-    font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:var(--ink-soft);
-    letter-spacing:.01em; white-space:nowrap;
+    font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--ink-soft);
+    letter-spacing:.01em;
   }
-  .nav-btn .ic{ font-size:16px; line-height:1; }
+  .nav-btn .ic{ font-size:17px; line-height:1; }
   .nav-btn.active{ color:var(--brass-deep); }
+
+  /* ---- More overlay ---- */
+  .more-overlay{
+    position:fixed; inset:0; background:rgba(22,38,28,.7); z-index:20;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .more-sheet{
+    width:100%; max-width:460px; background:var(--paper); border-radius:20px 20px 0 0;
+    padding:20px 16px 28px; box-shadow:0 -20px 50px rgba(0,0,0,.4);
+  }
+  .more-sheet-head{
+    display:flex; justify-content:space-between; align-items:center; padding:0 8px 14px;
+  }
+  .more-sheet-head h2{
+    font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:20px;
+    text-transform:uppercase; margin:0; letter-spacing:.01em;
+  }
+  .more-close{
+    border:none; background:var(--paper-dim); width:30px; height:30px; border-radius:50%;
+    font-size:16px; color:var(--ink-soft); cursor:pointer;
+  }
+  .more-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .more-item{
+    display:flex; flex-direction:column; align-items:center; gap:6px; padding:16px 8px;
+    border-radius:14px; border:1px solid var(--line); background:var(--paper-dim);
+    cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink);
+  }
+  .more-item .ic{ font-size:22px; }
+  .more-item.active{ border-color:var(--brass); background:rgba(201,162,75,.14); color:var(--brass-deep); }
 </style>
 </head>
 <body>
@@ -364,6 +392,8 @@
 <div class="bottom-nav">
   <div class="bottom-nav-inner" id="bottomNav"></div>
 </div>
+
+<div id="moreOverlayRoot"></div>
 
 <script>
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbxVGwkt88noCmju0w9z8RhJdWFBSx9TMjJOZPp2MHpIpXQ006WG69kWyMxGKveprg-RMg/exec";
@@ -508,31 +538,77 @@ document.getElementById('commishToggleBtn').addEventListener('click', () => {
   render();
 });
 
-const TABS = [
+const PRIMARY_TABS = [
   { id: 'team', icon: '🏈', label: 'Team' },
   { id: 'league', icon: '📊', label: 'League' },
+  { id: 'whatif', icon: '🔮', label: 'What-If' },
+];
+const MORE_TABS = [
   { id: 'picks', icon: '🎯', label: 'Picks' },
   { id: 'movers', icon: '📈', label: 'Movers' },
   { id: 'exempt', icon: '🔖', label: 'Exempt' },
-  { id: 'whatif', icon: '🔮', label: 'What-If' },
   { id: 'dues', icon: '💵', label: 'Dues' },
   { id: 'standings', icon: '🏆', label: 'Standings' },
   { id: 'commish', icon: '🛠️', label: 'Commish' },
 ];
+const TABS = PRIMARY_TABS.concat(MORE_TABS);
 
-document.getElementById('bottomNav').innerHTML = TABS.map(t =>
-  `<button class="nav-btn" data-tab="${t.id}"><span class="ic">${t.icon}</span>${t.label}</button>`
-).join('');
+function renderBottomNav(){
+  const isMoreActive = MORE_TABS.some(t => t.id === state.activeTab);
+  const activeMoreTab = MORE_TABS.find(t => t.id === state.activeTab);
+  const moreIcon = activeMoreTab ? activeMoreTab.icon : '⋯';
+  const moreLabel = activeMoreTab ? activeMoreTab.label : 'More';
 
-document.querySelectorAll('.nav-btn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    state.activeTab = btn.getAttribute('data-tab');
-    if (TEAM_TABS.includes(state.activeTab) && !state.data.roster){
-      state.data.roster = await get('roster', { team: state.selectedTeam });
-    }
-    render();
+  const items = PRIMARY_TABS.map(t =>
+    `<button class="nav-btn${t.id===state.activeTab?' active':''}" data-tab="${t.id}"><span class="ic">${t.icon}</span>${t.label}</button>`
+  ).join('') + `<button class="nav-btn${isMoreActive?' active':''}" id="moreNavBtn"><span class="ic">${moreIcon}</span>${moreLabel}</button>`;
+
+  document.getElementById('bottomNav').innerHTML = items;
+
+  document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      state.activeTab = btn.getAttribute('data-tab');
+      if (TEAM_TABS.includes(state.activeTab) && !state.data.roster){
+        state.data.roster = await get('roster', { team: state.selectedTeam });
+      }
+      render();
+    });
   });
-});
+  document.getElementById('moreNavBtn').addEventListener('click', openMoreOverlay);
+}
+
+function openMoreOverlay(){
+  const overlay = document.createElement('div');
+  overlay.className = 'more-overlay';
+  overlay.id = 'moreOverlay';
+  overlay.innerHTML = `
+    <div class="more-sheet">
+      <div class="more-sheet-head"><h2>More</h2><button class="more-close" id="moreCloseBtn">✕</button></div>
+      <div class="more-grid">
+        ${MORE_TABS.map(t => `<div class="more-item${t.id===state.activeTab?' active':''}" data-more-tab="${t.id}"><span class="ic">${t.icon}</span>${t.label}</div>`).join('')}
+      </div>
+    </div>`;
+  document.getElementById('moreOverlayRoot').appendChild(overlay);
+
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeMoreOverlay(); });
+  document.getElementById('moreCloseBtn').addEventListener('click', closeMoreOverlay);
+  overlay.querySelectorAll('[data-more-tab]').forEach(item => {
+    item.addEventListener('click', async () => {
+      state.activeTab = item.getAttribute('data-more-tab');
+      closeMoreOverlay();
+      if (TEAM_TABS.includes(state.activeTab) && !state.data.roster){
+        state.data.roster = await get('roster', { team: state.selectedTeam });
+      }
+      render();
+    });
+  });
+}
+function closeMoreOverlay(){
+  const overlay = document.getElementById('moreOverlay');
+  if (overlay) overlay.remove();
+}
+
+renderBottomNav();
 
 function updateTeamPickerVisibility(){
   const showTeamSelect = TEAM_TABS.includes(state.activeTab);
@@ -542,7 +618,7 @@ function updateTeamPickerVisibility(){
 }
 
 function render(){
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === state.activeTab));
+  renderBottomNav();
   updateTeamPickerVisibility();
   const root = document.getElementById('viewRoot');
   switch (state.activeTab){
