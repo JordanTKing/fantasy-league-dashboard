@@ -343,6 +343,105 @@
   .nav-btn .ic{ font-size:17px; line-height:1; }
   .nav-btn.active{ color:var(--brass-deep); }
 
+  /* =====================================================================
+     DESKTOP LAYOUT (min-width: 900px)
+     Sidebar navigation replaces bottom nav + More overlay entirely.
+     Content area widens and specific screens get real multi-column
+     treatments (see per-screen desktop rules further down).
+     ===================================================================== */
+  .sidebar{ display:none; }
+  @media (min-width: 900px){
+    body{
+      padding:0; align-items:flex-start; justify-content:flex-start;
+    }
+    .app-shell{
+      display:flex; width:100%; min-height:100vh;
+    }
+    .sidebar{
+      display:flex; flex-direction:column; width:220px; flex:none;
+      background:var(--paper); border-right:1px solid var(--line);
+      padding:28px 0; position:sticky; top:0; height:100vh; overflow-y:auto;
+    }
+    .sidebar-brand{
+      font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:20px;
+      text-transform:uppercase; padding:0 22px 22px; letter-spacing:.02em;
+    }
+    .sidebar-nav-btn{
+      display:flex; align-items:center; gap:12px; padding:11px 22px; border:none;
+      background:none; cursor:pointer; width:100%; text-align:left;
+      font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ink-soft);
+      border-left:3px solid transparent;
+    }
+    .sidebar-nav-btn .ic{ font-size:16px; }
+    .sidebar-nav-btn:hover{ background:var(--paper-dim); }
+    .sidebar-nav-btn.active{ color:var(--brass-deep); border-left-color:var(--brass); background:var(--paper-dim); font-weight:600; }
+
+    .bottom-nav, #moreOverlayRoot{ display:none; }
+
+    .main-content{
+      flex:1; padding:28px 40px 60px; max-width:1280px; margin:0 auto; width:100%;
+    }
+    .app{ max-width:none; width:100%; }
+    .status{ max-width:640px; }
+    .team-picker{ max-width:none; display:inline-flex; margin-bottom:20px; }
+    .team-picker select{ flex:none; width:260px; }
+
+    /* Generic desktop grid wrapper — mobile ignores this entirely (block/stack) */
+    .desktop-grid{ display:grid; gap:16px; }
+    .desktop-grid.cols-2{ grid-template-columns:1fr 1fr; }
+    .desktop-grid.cols-3{ grid-template-columns:repeat(3, 1fr); }
+    .desktop-grid.cols-4{ grid-template-columns:repeat(4, 1fr); }
+    .desktop-grid > .card{ margin-bottom:0; }
+
+    /* My Team: info/gauge card + roster card side by side */
+    .myteam-desktop-split{ display:grid; grid-template-columns:340px 1fr; gap:16px; align-items:start; }
+
+    /* League Overview: two-column list at desktop */
+    .league-desktop .list{ display:grid; grid-template-columns:1fr 1fr; gap:2px 12px; }
+
+    /* Draft Picks: mobile tab-based single-year card is hidden entirely at
+       desktop, replaced by a 4-column simultaneous view */
+    .draft-mobile-view{ display:none; }
+    .draft-desktop-columns{ display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; }
+    .draft-desktop-columns .card{ margin-bottom:0; }
+
+    /* Movers & Shakers: gainers/losers side by side, no toggle needed */
+    .movers-mobile-view{ display:none; }
+    .movers-desktop-columns{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .movers-desktop-columns .card{ margin-bottom:0; }
+
+    /* Salary Exempt: roster (left) + sticky deadline/preview panel (right) */
+    .exempt-desktop-split{ display:grid; grid-template-columns:1fr 360px; gap:16px; align-items:start; }
+    .exempt-desktop-split .sticky-panel{ position:sticky; top:28px; }
+
+    /* What-If: roster/reset (left) + add-a-player (right); cap summary spans both */
+    .whatif-desktop-split{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+
+    /* Dues/Payouts: paired sub-cards side by side */
+    .dues-desktop-pair{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .dues-desktop-pair .card{ margin-bottom:0; }
+
+    /* Standings: two snapshot tables side by side */
+    .standings-desktop-pair{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .standings-desktop-pair .card{ margin-bottom:0; }
+
+    /* Bracket: rounds flow left-to-right as columns instead of stacking */
+    .bracket-desktop-columns{ display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; align-items:start; }
+    .bracket-desktop-columns .card{ margin-bottom:0; }
+
+    /* Commissioner: checklist + CBS queue side by side */
+    .commish-desktop-split{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+    .commish-desktop-split .card{ margin-bottom:0; }
+  }
+  @media (max-width: 899px){
+    .movers-desktop-columns{ display:none; }
+    .bracket-desktop-columns{ display:none; }
+  }
+  @media (max-width: 899px){
+    .draft-mobile-view{ display:block; }
+    .draft-desktop-columns{ display:none; }
+  }
+
   /* ---- More overlay ---- */
   .more-overlay{
     position:fixed; inset:0; background:rgba(22,38,28,.7); z-index:20;
@@ -375,18 +474,27 @@
 </head>
 <body>
 
-<div class="app">
-  <div class="status">
-    <span><span class="dot pending" id="statusDot"></span><span id="statusText">connecting…</span></span>
-    <span>LIVE — POLLS EVERY 75s</span>
+<div class="app-shell">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">🏈 League Dashboard</div>
+    <div id="sidebarNav"></div>
   </div>
 
-  <div class="team-picker" id="teamPickerWrap" style="display:none;">
-    <select id="teamSelect"></select>
-    <button class="commish-pill" id="commishToggleBtn">🛠️</button>
-  </div>
+  <div class="main-content">
+    <div class="app">
+      <div class="status">
+        <span><span class="dot pending" id="statusDot"></span><span id="statusText">connecting…</span></span>
+        <span>LIVE — POLLS EVERY 75s</span>
+      </div>
 
-  <div id="viewRoot"></div>
+      <div class="team-picker" id="teamPickerWrap" style="display:none;">
+        <select id="teamSelect"></select>
+        <button class="commish-pill" id="commishToggleBtn">🛠️</button>
+      </div>
+
+      <div id="viewRoot"></div>
+    </div>
+  </div>
 </div>
 
 <div class="bottom-nav">
@@ -566,7 +674,23 @@ async function loadDataForTab(){
   }
 }
 
+function renderSidebarNav(){
+  const el = document.getElementById('sidebarNav');
+  if (!el) return;
+  el.innerHTML = TABS.map(t =>
+    `<button class="sidebar-nav-btn${t.id===state.activeTab?' active':''}" data-sidebar-tab="${t.id}"><span class="ic">${t.icon}</span>${t.label}</button>`
+  ).join('');
+  el.querySelectorAll('[data-sidebar-tab]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      state.activeTab = btn.getAttribute('data-sidebar-tab');
+      await loadDataForTab();
+      render();
+    });
+  });
+}
+
 function renderBottomNav(){
+  renderSidebarNav();
   const isMoreActive = MORE_TABS.some(t => t.id === state.activeTab);
   const activeMoreTab = MORE_TABS.find(t => t.id === state.activeTab);
   const moreIcon = activeMoreTab ? activeMoreTab.icon : '⋯';
@@ -672,33 +796,38 @@ function renderMyTeam(){
   }).join('');
 
   return `
-    <div class="card">
-      <div class="card-head">
-        <p class="eyebrow">My Team</p>
-        <h1>${state.selectedTeam || '—'}</h1>
-      </div>
-      <div class="gauge-wrap">
-        <div class="gauge">
-          <svg width="104" height="104" viewBox="0 0 104 104">
-            <circle cx="52" cy="52" r="45" fill="none" stroke="#e4dcc4" stroke-width="9"/>
-            <circle cx="52" cy="52" r="45" fill="none" stroke="${arcColor}" stroke-width="9" stroke-linecap="round"
-              transform="rotate(-90 52 52)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
-          </svg>
-          <div class="gauge-num"><span class="pct">${pct}%</span><span class="lbl">of cap</span></div>
+    <div class="myteam-desktop-split">
+      <div class="card">
+        <div class="card-head">
+          <p class="eyebrow">My Team</p>
+          <h1>${state.selectedTeam || '—'}</h1>
         </div>
-        <div class="cap-figures">
-          <div class="cap-row"><span class="k">Salary used</span><span class="v">${fmtMoney(info?info.totalSalary:0)}</span></div>
-          <div class="cap-row"><span class="k">League cap</span><span class="v">${fmtMoney(info?info.cap:200)}</span></div>
-          <div class="cap-divider"></div>
-          <div class="cap-row"><span class="k">Remaining</span><span class="v ${info&&info.capSpace<0?'over':'accent'}">${fmtMoney(info?info.capSpace:0)}</span></div>
+        <div class="gauge-wrap" style="border-bottom:none;">
+          <div class="gauge">
+            <svg width="104" height="104" viewBox="0 0 104 104">
+              <circle cx="52" cy="52" r="45" fill="none" stroke="#e4dcc4" stroke-width="9"/>
+              <circle cx="52" cy="52" r="45" fill="none" stroke="${arcColor}" stroke-width="9" stroke-linecap="round"
+                transform="rotate(-90 52 52)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+            </svg>
+            <div class="gauge-num"><span class="pct">${pct}%</span><span class="lbl">of cap</span></div>
+          </div>
+          <div class="cap-figures">
+            <div class="cap-row"><span class="k">Salary used</span><span class="v">${fmtMoney(info?info.totalSalary:0)}</span></div>
+            <div class="cap-row"><span class="k">League cap</span><span class="v">${fmtMoney(info?info.cap:200)}</span></div>
+            <div class="cap-divider"></div>
+            <div class="cap-row"><span class="k">Remaining</span><span class="v ${info&&info.capSpace<0?'over':'accent'}">${fmtMoney(info?info.capSpace:0)}</span></div>
+          </div>
         </div>
+        <div class="card-foot" style="border-top:1px dashed var(--line);"><span>SOURCE: ${roster.salaryTabUsed}</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
       </div>
-      <div class="toggle-row">
-        <button class="toggle-btn${state.ui.teamSort==='position'?' active':''}" data-sort="position">By Position</button>
-        <button class="toggle-btn${state.ui.teamSort==='salary'?' active':''}" data-sort="salary">By Salary</button>
+      <div class="card">
+        <div class="card-head"><p class="eyebrow">Roster</p><h1>${sorted.length} Players</h1></div>
+        <div class="toggle-row">
+          <button class="toggle-btn${state.ui.teamSort==='position'?' active':''}" data-sort="position">By Position</button>
+          <button class="toggle-btn${state.ui.teamSort==='salary'?' active':''}" data-sort="salary">By Salary</button>
+        </div>
+        <div class="list">${rows}</div>
       </div>
-      <div class="list">${rows}</div>
-      <div class="card-foot"><span>SOURCE: ${roster.salaryTabUsed}</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
     </div>`;
 }
 function attachMyTeamHandlers(){
@@ -737,7 +866,7 @@ function renderLeague(){
   }).join('');
 
   return `
-    <div class="card">
+    <div class="card league-desktop">
       <div class="card-head">
         <p class="eyebrow">League Overview</p>
         <h1>All 12 Teams</h1>
@@ -764,35 +893,62 @@ function renderDraftPicks(){
   if (!draft) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
 
   const years = ['2026','2027','2028','2029'];
-  const teamPicks = draft.picks.filter(p => p.currentOwnerTeam === state.selectedTeam && p.year === state.ui.draftYear);
-  teamPicks.sort((a,b) => {
-    const ra = parseInt(a.round,10)||0, rb = parseInt(b.round,10)||0;
-    if (ra !== rb) return ra-rb;
-    return (parseInt(a.pick,10)||0) - (parseInt(b.pick,10)||0);
-  });
 
-  const rows = teamPicks.map(p => {
-    const label = p.pick ? `Round ${p.round}, Pick ${p.pick}` : `Round ${p.round}`;
-    const sub = p.overallPick ? `Overall #${p.overallPick}` : '';
-    return `
-      <div class="row">
-        <span class="round-chip">${p.round}</span>
-        <div class="rname"><span class="n">${label}</span>${sub?`<div class="t">${sub}</div>`:''}</div>
-        ${p.traded?`<span class="tag team">via ${p.originalOwnerTeam}</span>`:''}
-      </div>`;
-  }).join('') || `<div class="placeholder">No picks found for this team/year.</div>`;
+  function picksForYear(year){
+    const list = draft.picks.filter(p => p.currentOwnerTeam === state.selectedTeam && p.year === year);
+    list.sort((a,b) => {
+      const ra = parseInt(a.round,10)||0, rb = parseInt(b.round,10)||0;
+      if (ra !== rb) return ra-rb;
+      return (parseInt(a.pick,10)||0) - (parseInt(b.pick,10)||0);
+    });
+    return list;
+  }
+  function rowsHtml(list){
+    return list.map(p => {
+      const label = p.pick ? `Round ${p.round}, Pick ${p.pick}` : `Round ${p.round}`;
+      const sub = p.overallPick ? `Overall #${p.overallPick}` : '';
+      return `
+        <div class="row">
+          <span class="round-chip">${p.round}</span>
+          <div class="rname"><span class="n">${label}</span>${sub?`<div class="t">${sub}</div>`:''}</div>
+          ${p.traded?`<span class="tag team">via ${p.originalOwnerTeam}</span>`:''}
+        </div>`;
+    }).join('') || `<div class="placeholder">No picks found.</div>`;
+  }
 
-  return `
-    <div class="card">
-      <div class="card-head">
-        <p class="eyebrow">Draft Picks</p>
-        <h1>${state.selectedTeam || '—'}</h1>
+  // ---- Mobile: single card, tab-switched between years ----
+  const mobileYearPicks = picksForYear(state.ui.draftYear);
+  const mobileView = `
+    <div class="draft-mobile-view">
+      <div class="card">
+        <div class="card-head">
+          <p class="eyebrow">Draft Picks</p>
+          <h1>${state.selectedTeam || '—'}</h1>
+        </div>
+        <div class="underline-tabs">${years.map(y => `<button class="u-tab${y===state.ui.draftYear?' active':''}" data-year="${y}">${y}</button>`).join('')}</div>
+        <p class="subtext" style="padding:12px 22px 0;">${mobileYearPicks.length} pick${mobileYearPicks.length!==1?'s':''} in ${state.ui.draftYear}</p>
+        <div class="list">${rowsHtml(mobileYearPicks)}</div>
+        <div class="card-foot"><span>SOURCE: Draft Picks</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
       </div>
-      <div class="underline-tabs">${years.map(y => `<button class="u-tab${y===state.ui.draftYear?' active':''}" data-year="${y}">${y}</button>`).join('')}</div>
-      <p class="subtext" style="padding:12px 22px 0;">${teamPicks.length} pick${teamPicks.length!==1?'s':''} in ${state.ui.draftYear}</p>
-      <div class="list">${rows}</div>
-      <div class="card-foot"><span>SOURCE: Draft Picks</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
     </div>`;
+
+  // ---- Desktop: all 4 years side by side, no tab-switching needed ----
+  const desktopView = `
+    <div class="draft-desktop-columns">
+      ${years.map(y => {
+        const list = picksForYear(y);
+        return `
+          <div class="card">
+            <div class="card-head">
+              <p class="eyebrow">${y}</p>
+              <h1 style="font-size:20px;">${list.length} Pick${list.length!==1?'s':''}</h1>
+            </div>
+            <div class="list">${rowsHtml(list)}</div>
+          </div>`;
+      }).join('')}
+    </div>`;
+
+  return mobileView + desktopView;
 }
 function attachDraftHandlers(){
   document.querySelectorAll('[data-year]').forEach(btn => {
@@ -808,8 +964,8 @@ function renderMovers(){
   if (m.note){
     return `<div class="card"><div class="card-head"><p class="eyebrow">Movers & Shakers</p><h1>Salary Swings</h1><p class="subtext">${m.note}</p></div><div class="placeholder">Check back after the next salary update.</div></div>`;
   }
-  const items = state.ui.moversView === 'gainers' ? m.gainers : m.losers;
-  const rows = (items||[]).map((p,i) => {
+
+  function rowHtml(p, i){
     const up = p.delta > 0;
     const teamTag = p.fantasyTeam ? `<span class="tag team">${p.fantasyTeam}</span>` : `<span class="tag team fa">Free Agent</span>`;
     return `
@@ -822,22 +978,44 @@ function renderMovers(){
           <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);">$${p.previousSalary} → $${p.currentSalary}</div>
         </div>
       </div>`;
-  }).join('') || `<div class="placeholder">No ${state.ui.moversView} this update.</div>`;
+  }
+  function rowsFor(view){
+    const items = view === 'gainers' ? m.gainers : m.losers;
+    return (items||[]).map(rowHtml).join('') || `<div class="placeholder">No ${view} this update.</div>`;
+  }
 
-  return `
-    <div class="card">
-      <div class="card-head">
-        <p class="eyebrow">Movers & Shakers</p>
-        <h1>Salary Swings</h1>
-        <p class="subtext">Comparing ${m.previousTab} → ${m.currentTab}</p>
+  // ---- Mobile: single card, toggled between gainers/losers ----
+  const mobileView = `
+    <div class="movers-mobile-view">
+      <div class="card">
+        <div class="card-head">
+          <p class="eyebrow">Movers & Shakers</p>
+          <h1>Salary Swings</h1>
+          <p class="subtext">Comparing ${m.previousTab} → ${m.currentTab}</p>
+        </div>
+        <div class="toggle-row">
+          <button class="toggle-btn${state.ui.moversView==='gainers'?' active good':''}" data-mview="gainers">↑ Gainers</button>
+          <button class="toggle-btn${state.ui.moversView==='losers'?' active over':''}" data-mview="losers">↓ Losers</button>
+        </div>
+        <div class="list">${rowsFor(state.ui.moversView)}</div>
+        <div class="card-foot"><span>SOURCE: Player Salaries (Trend)</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
       </div>
-      <div class="toggle-row">
-        <button class="toggle-btn${state.ui.moversView==='gainers'?' active good':''}" data-mview="gainers">↑ Gainers</button>
-        <button class="toggle-btn${state.ui.moversView==='losers'?' active over':''}" data-mview="losers">↓ Losers</button>
-      </div>
-      <div class="list">${rows}</div>
-      <div class="card-foot"><span>SOURCE: Player Salaries (Trend)</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
     </div>`;
+
+  // ---- Desktop: gainers and losers side by side, no toggle needed ----
+  const desktopView = `
+    <div class="movers-desktop-columns">
+      <div class="card">
+        <div class="card-head"><p class="eyebrow">↑ Gainers</p><h1 style="font-size:20px;color:var(--good);">Salary Up</h1><p class="subtext">${m.previousTab} → ${m.currentTab}</p></div>
+        <div class="list">${rowsFor('gainers')}</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><p class="eyebrow">↓ Losers</p><h1 style="font-size:20px;color:var(--over);">Salary Down</h1><p class="subtext">${m.previousTab} → ${m.currentTab}</p></div>
+        <div class="list">${rowsFor('losers')}</div>
+      </div>
+    </div>`;
+
+  return mobileView + desktopView;
 }
 function attachMoversHandlers(){
   document.querySelectorAll('[data-mview]').forEach(btn => {
@@ -868,7 +1046,7 @@ function renderExempt(){
 
   const ds = deadlineState();
   const existing = state.data.exemptSelections.selections.find(s => s.team === state.selectedTeam);
-  const bannerHtml = `<div class="deadline-banner ${ds.state}">${ds.state==='closed' ? 'Selection window closed' : ds.label + (ds.ms!==null ? '  ·  ' + fmtRemaining(ds.ms) : '')}</div>`;
+  const bannerHtml = `<div class="deadline-banner ${ds.state}" style="margin-bottom:14px; border-radius:14px;">${ds.state==='closed' ? 'Selection window closed' : ds.label + (ds.ms!==null ? '  ·  ' + fmtRemaining(ds.ms) : '')}</div>`;
 
   if ((existing && existing.locked) || ds.state === 'closed'){
     const body = existing
@@ -908,21 +1086,30 @@ function renderExempt(){
         <input type="password" inputmode="numeric" id="exemptPinInput" placeholder="PIN" value="${state.ui.exemptPin}">
         <button id="exemptSubmitBtn">${existing ? 'Update Pick' : 'Lock In Pick'}</button>
       </div>`;
+  } else {
+    previewHtml = `<div class="placeholder">Tap a player to preview your cap impact here.</div>`;
   }
 
   return `
-    <div class="card">
-      <div class="card-head"><p class="eyebrow">Salary Exempt</p><h1>${state.selectedTeam||'—'}</h1></div>
-      ${bannerHtml}
-      ${existing ? `<div class="toast">Currently submitted: <b>${existing.player}</b>. You can change this until the deadline.</div>` : ''}
-      <div class="eligibility-note"><b>Eligibility:</b> only 1st-year (rookie) or 2nd-year players qualify. DST is never eligible${excluded>0?' — '+excluded+' hidden':''}. Rookie years are flagged when known; 2nd-year status isn't tracked automatically, so double-check.</div>
-      <div class="toggle-row">
-        <button class="toggle-btn${state.ui.exemptSort==='position'?' active':''}" data-esort="position">By Position</button>
-        <button class="toggle-btn${state.ui.exemptSort==='salary'?' active':''}" data-esort="salary">By Salary</button>
+    ${bannerHtml}
+    <div class="exempt-desktop-split">
+      <div class="card">
+        <div class="card-head"><p class="eyebrow">Salary Exempt</p><h1>${state.selectedTeam||'—'}</h1></div>
+        ${existing ? `<div class="toast">Currently submitted: <b>${existing.player}</b>. You can change this until the deadline.</div>` : ''}
+        <div class="eligibility-note"><b>Eligibility:</b> only 1st-year (rookie) or 2nd-year players qualify. DST is never eligible${excluded>0?' — '+excluded+' hidden':''}. Rookie years are flagged when known; 2nd-year status isn't tracked automatically, so double-check.</div>
+        <div class="toggle-row">
+          <button class="toggle-btn${state.ui.exemptSort==='position'?' active':''}" data-esort="position">By Position</button>
+          <button class="toggle-btn${state.ui.exemptSort==='salary'?' active':''}" data-esort="salary">By Salary</button>
+        </div>
+        <div class="list">${rows}</div>
       </div>
-      <div class="list">${rows}</div>
-      ${previewHtml}
-      <div id="exemptErrBox"></div>
+      <div class="sticky-panel">
+        <div class="card">
+          <div class="card-head"><p class="eyebrow">Cap Preview</p><h1 style="font-size:20px;">${state.ui.exemptSelectedPlayer || 'No selection'}</h1></div>
+          ${previewHtml}
+          <div id="exemptErrBox"></div>
+        </div>
+      </div>
     </div>`;
 }
 function attachExemptHandlers(){
@@ -982,11 +1169,14 @@ function renderWhatIf(){
       <div class="cap-arrow">→</div>
       <div class="cap-block"><div class="lbl">Hypothetical</div><div class="val ${overCap?'over':'good'}">${fmtMoney(hypTotal)}</div></div>
       <div class="cap-block"><div class="lbl">Cap Space</div><div class="val ${space<0?'over':'good'}">${space<0?'−':''}${fmtMoney(Math.abs(space))}</div></div>
-    </div>`;
+    </div>
+  </div>`;
 
+  // ---- Left: Added-this-scenario + Your Roster ----
+  let leftCard = `<div class="card">`;
   if (state.ui.whatIfAdded.length > 0){
-    html += `<div class="section-label">Added This Scenario</div><div class="list">`;
-    html += state.ui.whatIfAdded.map(p => {
+    leftCard += `<div class="section-label">Added This Scenario</div><div class="list">`;
+    leftCard += state.ui.whatIfAdded.map(p => {
       const teamTag = p.fantasyTeam
         ? `<span class="tag team">via ${p.fantasyTeam}</span>`
         : `<span class="tag team fa">Free Agent</span>`;
@@ -998,12 +1188,11 @@ function renderWhatIf(){
           <span class="action-icon remove">✕</span>
         </div>`;
     }).join('');
-    html += `</div>`;
+    leftCard += `</div>`;
   }
-
-  html += `<div class="section-label">Your Roster <button class="reset-link" id="resetScenarioBtn">Reset scenario</button></div><div class="list">`;
+  leftCard += `<div class="section-label">Your Roster <button class="reset-link" id="resetScenarioBtn">Reset scenario</button></div><div class="list">`;
   const sortedRosterList = [...state.data.roster.roster].sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
-  html += sortedRosterList.map(p => {
+  leftCard += sortedRosterList.map(p => {
     const isRemoved = state.ui.whatIfRemoved.has(p.player);
     return `
       <div class="row clickable${isRemoved?' removing':''}" data-toggle-remove="${p.player}">
@@ -1013,9 +1202,11 @@ function renderWhatIf(){
         <span class="action-icon remove">${isRemoved?'↺':'✕'}</span>
       </div>`;
   }).join('');
-  html += `</div>`;
+  leftCard += `</div></div>`;
 
-  html += `<div class="section-label">Add a Player</div>
+  // ---- Right: Add a Player ----
+  const rightCard = `<div class="card">
+    <div class="section-label">Add a Player</div>
     <div class="filters">
       <input class="search" id="whatIfSearch" placeholder="Search player name…" value="${state.ui.whatIfSearch}">
       <select id="whatIfTeamFilter">
@@ -1033,6 +1224,8 @@ function renderWhatIf(){
     <div id="whatIfErrBox"></div>
     <div class="card-foot"><span>SOURCE: League Salary Cap · Player Salaries</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
   </div>`;
+
+  html += `<div class="whatif-desktop-split">${leftCard}${rightCard}</div>`;
 
   return html;
 }
@@ -1143,54 +1336,59 @@ function renderDues(){
     : `<div class="placeholder">Couldn't match your team to a dues row.</div>`;
   html += `</div>`;
 
-  html += `<div class="card"><div class="card-head"><p class="eyebrow">Team Dues</p><h1>All 12 Teams</h1><p class="subtext">$100 entry + $30 weekly high-score add-on = $130 per team.</p></div><div class="list">`;
+  let teamDuesCard = `<div class="card"><div class="card-head"><p class="eyebrow">Team Dues</p><h1>All 12 Teams</h1><p class="subtext">$100 entry + $30 weekly high-score add-on = $130 per team.</p></div><div class="list">`;
   d.teamDues.forEach(x => {
     const mine = state.selectedTeam && x.team.toLowerCase().includes(state.selectedTeam.toLowerCase());
-    html += `<div class="row${mine?' mine':''}">
+    teamDuesCard += `<div class="row${mine?' mine':''}">
       <div class="rname"><span class="n">${x.team}</span><span class="t"> · $${x.totalDue} due</span></div>
       ${isCommish ? `<button class="paid-toggle ${x.paid?'yes':'no'}" data-toggle-team="${x.team}" data-paid="${x.paid}">${x.paid?'Paid':'Unpaid'}</button>` : `<span class="paid-pill ${x.paid?'yes':'no'}">${x.paid?'Paid':'Unpaid'}</span>`}
     </div>`;
   });
-  html += `</div></div>`;
+  teamDuesCard += `</div></div>`;
 
-  html += `<div class="card"><div class="card-head"><p class="eyebrow">Weekly High Score</p><h1>$25 Pot</h1></div><div class="list">`;
+  let weeklyCard = `<div class="card"><div class="card-head"><p class="eyebrow">Weekly High Score</p><h1>$25 Pot</h1></div><div class="list">`;
   d.weeklyHighScore.forEach(w => {
-    html += `<div class="row">
+    weeklyCard += `<div class="row">
       <div class="rname"><span class="n">Week ${w.week}</span><span class="t"> · ${w.winner||'Not yet set'}</span></div>
       <span class="rsal">$${w.amount}</span>
       ${isCommish ? `<button class="paid-toggle ${w.paid?'yes':'no'}" data-toggle-week="${w.week}" data-paid="${w.paid}">${w.paid?'Paid':'Unpaid'}</button>` : `<span class="paid-pill ${w.paid?'yes':'no'}">${w.paid?'Paid':'Unpaid'}</span>`}
     </div>`;
   });
-  html += `</div></div>`;
+  weeklyCard += `</div></div>`;
 
-  html += `<div class="card"><div class="card-head"><p class="eyebrow">Playoffs</p><h1>Payout Pot</h1></div>`;
+  html += `<div class="dues-desktop-pair">${teamDuesCard}${weeklyCard}</div>`;
+
+  let playoffCard = `<div class="card"><div class="card-head"><p class="eyebrow">Playoffs</p><h1>Payout Pot</h1></div>`;
   if (d.availablePayoutPot){
-    html += `<div class="pot-box">
+    playoffCard += `<div class="pot-box">
       <div class="pot-row"><span class="k">Anticipated pot</span><span class="v">${fmtMoney(d.availablePayoutPot.anticipated)}</span></div>
       <div class="pot-row"><span class="k">Actual pot</span><span class="v">${fmtMoney(d.availablePayoutPot.actual)}</span></div>
       <div class="pot-note">League Dues − High Score Payouts − League Activation Fee</div>
     </div>`;
   }
-  html += `<div class="list">`;
+  playoffCard += `<div class="list">`;
   d.playoffPayout.forEach(p => {
-    html += `<div class="row">
+    playoffCard += `<div class="row">
       <div class="rname"><span class="n">${p.place} Place${p.pct?' · '+Math.round(p.pct*100)+'%':''}</span><span class="t"> · ${p.winner||'TBD'}</span></div>
       <span class="rsal">${fmtMoney(p.actual)}</span>
       ${isCommish ? `<button class="paid-toggle ${p.paid?'yes':'no'}" data-toggle-place="${p.place}" data-paid="${p.paid}">${p.paid?'Paid':'Unpaid'}</button>` : `<span class="paid-pill ${p.paid?'yes':'no'}">${p.paid?'Paid':'Unpaid'}</span>`}
     </div>`;
   });
-  html += `</div></div>`;
+  playoffCard += `</div></div>`;
 
   if (d.miscPayouts.length > 0){
-    html += `<div class="card"><div class="card-head"><p class="eyebrow">Misc</p><h1>Other Payouts</h1></div><div class="list">`;
+    let miscCard = `<div class="card"><div class="card-head"><p class="eyebrow">Misc</p><h1>Other Payouts</h1></div><div class="list">`;
     d.miscPayouts.forEach(m => {
-      html += `<div class="row">
+      miscCard += `<div class="row">
         <div class="rname"><span class="n">${m.what}</span><span class="t"> · ${m.who||'—'}</span></div>
         <span class="rsal">${fmtMoney(m.amount)}</span>
         ${isCommish ? `<button class="paid-toggle ${m.paid?'yes':'no'}" data-toggle-misc="${m.what}" data-paid="${m.paid}">${m.paid?'Paid':'Unpaid'}</button>` : `<span class="paid-pill ${m.paid?'yes':'no'}">${m.paid?'Paid':'Unpaid'}</span>`}
       </div>`;
     });
-    html += `</div></div>`;
+    miscCard += `</div></div>`;
+    html += `<div class="dues-desktop-pair">${playoffCard}${miscCard}</div>`;
+  } else {
+    html += playoffCard;
   }
 
   html += `<div class="card-foot"><span>SOURCE: League Dues/Payouts</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>`;
@@ -1230,24 +1428,27 @@ function renderStandingsTab(){
 function renderStandingsSnapshots(){
   const s = state.data.standings;
   if (!s) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
-  let html = `<div class="card"><div class="card-head"><p class="eyebrow">Snapshot — End of Week 14</p><h1>Regular Season</h1></div>`;
+  let regCard = `<div class="card"><div class="card-head"><p class="eyebrow">Snapshot — End of Week 14</p><h1>Regular Season</h1></div>`;
   if (s.regularSeason.length === 0){
-    html += `<div class="placeholder">Not filled in yet — check back after Week 14.</div>`;
+    regCard += `<div class="placeholder">Not filled in yet — check back after Week 14.</div>`;
   } else {
-    html += `<table class="standings"><thead><tr><th></th><th>Team</th><th>Record</th><th>PF</th><th>PA</th></tr></thead><tbody>`;
-    s.regularSeason.forEach(r => { html += `<tr><td class="place">${r.place}</td><td class="team">${r.team}</td><td>${r.record||'—'}</td><td class="num">${r.pointsFor??'—'}</td><td class="num">${r.pointsAgainst??'—'}</td></tr>`; });
-    html += `</tbody></table>`;
+    regCard += `<table class="standings"><thead><tr><th></th><th>Team</th><th>Record</th><th>PF</th><th>PA</th></tr></thead><tbody>`;
+    s.regularSeason.forEach(r => { regCard += `<tr><td class="place">${r.place}</td><td class="team">${r.team}</td><td>${r.record||'—'}</td><td class="num">${r.pointsFor??'—'}</td><td class="num">${r.pointsAgainst??'—'}</td></tr>`; });
+    regCard += `</tbody></table>`;
   }
-  html += `</div><div class="card"><div class="card-head"><p class="eyebrow">Snapshot — After Playoffs</p><h1>Final Standings</h1></div>`;
+  regCard += `</div>`;
+
+  let finalCard = `<div class="card"><div class="card-head"><p class="eyebrow">Snapshot — After Playoffs</p><h1>Final Standings</h1></div>`;
   if (s.finalStandings.length === 0){
-    html += `<div class="placeholder">Not filled in yet — check back once playoffs conclude.</div>`;
+    finalCard += `<div class="placeholder">Not filled in yet — check back once playoffs conclude.</div>`;
   } else {
-    html += `<table class="standings"><tbody>`;
-    s.finalStandings.forEach(f => { html += `<tr class="${f.place===1?'champ':''}"><td class="place">${f.place}</td><td class="team">${f.team}</td></tr>`; });
-    html += `</tbody></table>`;
+    finalCard += `<table class="standings"><tbody>`;
+    s.finalStandings.forEach(f => { finalCard += `<tr class="${f.place===1?'champ':''}"><td class="place">${f.place}</td><td class="team">${f.team}</td></tr>`; });
+    finalCard += `</tbody></table>`;
   }
-  html += `<div class="card-foot"><span>SOURCE: EOY Standings</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div></div>`;
-  return html;
+  finalCard += `<div class="card-foot"><span>SOURCE: EOY Standings</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div></div>`;
+
+  return `<div class="standings-desktop-pair">${regCard}${finalCard}</div>`;
 }
 
 function matchupHtml(team1, team2, g){
@@ -1265,27 +1466,54 @@ function matchupHtml(team1, team2, g){
 function renderBracketReadOnly(){
   const b = state.data.bracket || emptyBracket();
   const hasSeeds = b.seeds && Object.values(b.seeds).some(v => v);
-  let html = `<div class="card"><div class="card-head"><p class="eyebrow">Playoffs</p><h1>Bracket</h1><p class="subtext">Entered manually by the commissioner as each round wraps up.</p></div>`;
+  const editBtn = state.ui.commissioner ? `<button class="primary-btn margined" id="bracketEditToggle">Edit Bracket</button>` : '';
+
   if (!hasSeeds){
-    html += `<div class="placeholder">Bracket hasn't been set up yet.</div></div>`;
-    return html;
+    return `<div class="card"><div class="card-head"><p class="eyebrow">Playoffs</p><h1>Bracket</h1><p class="subtext">Entered manually by the commissioner as each round wraps up.</p></div><div class="placeholder">Bracket hasn't been set up yet.</div></div>`;
   }
-  html += `<div class="round-label">Round 1 — Week 15</div>`;
-  html += matchupHtml(bracketTeamName(b,3), bracketTeamName(b,6), b.round1.a);
-  html += matchupHtml(bracketTeamName(b,4), bracketTeamName(b,5), b.round1.b);
-  html += `<div class="bye-note">Seeds 1 (${bracketTeamName(b,1)}) and 2 (${bracketTeamName(b,2)}) had first-round byes</div>`;
-  html += `<div class="round-label">Round 2 — Week 16</div><p class="subtext" style="padding:0 22px 8px;">Re-seeded from that week's actual CBS matchups.</p>`;
-  html += matchupHtml(b.round2.a.team1, b.round2.a.team2, b.round2.a);
-  html += matchupHtml(b.round2.b.team1, b.round2.b.team2, b.round2.b);
-  html += `<div class="round-label">Championship — Week 17</div>`;
-  html += matchupHtml(b.championship.team1, b.championship.team2, b.championship);
-  html += `<div class="round-label">Third Place Game — Week 17</div>`;
-  html += matchupHtml(b.thirdPlace.team1, b.thirdPlace.team2, b.thirdPlace);
-  html += `<div class="card-foot"><span>Entered by commissioner</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div></div>`;
-  if (state.ui.commissioner){
-    html += `<button class="primary-btn margined" id="bracketEditToggle">Edit Bracket</button>`;
-  }
-  return html;
+
+  // ---- Mobile: everything stacked in one card ----
+  let mobileHtml = `<div class="card">
+    <div class="card-head"><p class="eyebrow">Playoffs</p><h1>Bracket</h1><p class="subtext">Entered manually by the commissioner as each round wraps up.</p></div>
+    <div class="round-label">Round 1 — Week 15</div>
+    ${matchupHtml(bracketTeamName(b,3), bracketTeamName(b,6), b.round1.a)}
+    ${matchupHtml(bracketTeamName(b,4), bracketTeamName(b,5), b.round1.b)}
+    <div class="bye-note">Seeds 1 (${bracketTeamName(b,1)}) and 2 (${bracketTeamName(b,2)}) had first-round byes</div>
+    <div class="round-label">Round 2 — Week 16</div><p class="subtext" style="padding:0 22px 8px;">Re-seeded from that week's actual CBS matchups.</p>
+    ${matchupHtml(b.round2.a.team1, b.round2.a.team2, b.round2.a)}
+    ${matchupHtml(b.round2.b.team1, b.round2.b.team2, b.round2.b)}
+    <div class="round-label">Championship — Week 17</div>
+    ${matchupHtml(b.championship.team1, b.championship.team2, b.championship)}
+    <div class="round-label">Third Place Game — Week 17</div>
+    ${matchupHtml(b.thirdPlace.team1, b.thirdPlace.team2, b.thirdPlace)}
+    <div class="card-foot"><span>Entered by commissioner</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
+  </div>`;
+  mobileHtml = `<div class="draft-mobile-view">${mobileHtml}</div>`; // reuses same "hide at desktop" utility class
+
+  // ---- Desktop: rounds flow left-to-right as their own columns ----
+  const desktopHtml = `<div class="bracket-desktop-columns">
+    <div class="card">
+      <div class="card-head"><p class="eyebrow">Round 1</p><h1 style="font-size:19px;">Week 15</h1></div>
+      ${matchupHtml(bracketTeamName(b,3), bracketTeamName(b,6), b.round1.a)}
+      ${matchupHtml(bracketTeamName(b,4), bracketTeamName(b,5), b.round1.b)}
+      <div class="bye-note">Seeds 1 (${bracketTeamName(b,1)}) & 2 (${bracketTeamName(b,2)}) had byes</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><p class="eyebrow">Round 2</p><h1 style="font-size:19px;">Week 16</h1></div>
+      ${matchupHtml(b.round2.a.team1, b.round2.a.team2, b.round2.a)}
+      ${matchupHtml(b.round2.b.team1, b.round2.b.team2, b.round2.b)}
+    </div>
+    <div class="card">
+      <div class="card-head"><p class="eyebrow">Championship</p><h1 style="font-size:19px;">Week 17</h1></div>
+      ${matchupHtml(b.championship.team1, b.championship.team2, b.championship)}
+    </div>
+    <div class="card">
+      <div class="card-head"><p class="eyebrow">Third Place</p><h1 style="font-size:19px;">Week 17</h1></div>
+      ${matchupHtml(b.thirdPlace.team1, b.thirdPlace.team2, b.thirdPlace)}
+    </div>
+  </div>`;
+
+  return mobileHtml + desktopHtml + editBtn;
 }
 
 function renderBracketEdit(){
@@ -1444,21 +1672,23 @@ function renderCommish(){
   }
 
   return `
-    <div class="card">
-      <div class="card-head"><p class="eyebrow">Commissioner</p><h1>Exempt Checklist</h1></div>
-      <div class="summary-row">
-        <div class="summary-chip submitted"><div class="num">${submitted}</div><div class="lbl">Submitted</div></div>
-        <div class="summary-chip pending"><div class="num">${allTeams.length-submitted-missed}</div><div class="lbl">Not Yet</div></div>
-        <div class="summary-chip missed"><div class="num">${missed}</div><div class="lbl">Missed</div></div>
+    <div class="commish-desktop-split">
+      <div class="card">
+        <div class="card-head"><p class="eyebrow">Commissioner</p><h1>Exempt Checklist</h1></div>
+        <div class="summary-row">
+          <div class="summary-chip submitted"><div class="num">${submitted}</div><div class="lbl">Submitted</div></div>
+          <div class="summary-chip pending"><div class="num">${allTeams.length-submitted-missed}</div><div class="lbl">Not Yet</div></div>
+          <div class="summary-chip missed"><div class="num">${missed}</div><div class="lbl">Missed</div></div>
+        </div>
+        <div class="deadline-banner ${ds.state}">${ds.state==='closed'?'Deadline passed':ds.label}</div>
+        <div class="list">${checklistHtml}</div>
       </div>
-      <div class="deadline-banner ${ds.state}">${ds.state==='closed'?'Deadline passed':ds.label}</div>
-      <div class="list">${checklistHtml}</div>
-    </div>
-    <div class="card">
-      <div class="card-head"><p class="eyebrow">Commissioner</p><h1>CBS Update Queue</h1><p class="subtext">Locked-in picks still needing the manual $0 update in CBS.</p></div>
-      <div class="list">${queueHtml}</div>
-      <div id="cbsErrBox"></div>
-      <div class="card-foot"><span>SOURCE: ExemptSelections · Checklist</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
+      <div class="card">
+        <div class="card-head"><p class="eyebrow">Commissioner</p><h1>CBS Update Queue</h1><p class="subtext">Locked-in picks still needing the manual $0 update in CBS.</p></div>
+        <div class="list">${queueHtml}</div>
+        <div id="cbsErrBox"></div>
+        <div class="card-foot"><span>SOURCE: ExemptSelections · Checklist</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
+      </div>
     </div>`;
 }
 
