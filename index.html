@@ -462,9 +462,9 @@ function setStatus(s, t){ dot.className='dot '+s; statusText.textContent=t; }
 async function refreshAll(isInitial){
   setStatus('pending', isInitial ? 'connecting…' : 'syncing…');
   try {
-    const [cap, exempt, checklist, config, draft, movers, allPlayers, dues, standings, bracket] = await Promise.all([
+    const [cap, exempt, checklist, config, draft, movers, dues, standings, bracket] = await Promise.all([
       get('salarycap'), get('exemptstatus'), get('checklist'), get('config'),
-      get('draftpicks'), get('moversshakers'), get('allplayers'), get('duespayouts'),
+      get('draftpicks'), get('moversshakers'), get('duespayouts'),
       get('standings'), get('bracket'),
     ]);
     state.data.salaryCap = cap;
@@ -473,7 +473,6 @@ async function refreshAll(isInitial){
     state.data.config = config;
     state.data.draftPicks = draft;
     state.data.movers = movers;
-    state.data.allPlayers = allPlayers;
     state.data.duesPayouts = dues;
     state.data.standings = standings;
     state.data.bracket = bracket.bracket;
@@ -487,6 +486,11 @@ async function refreshAll(isInitial){
 
     if (TEAM_TABS.includes(state.activeTab) && state.selectedTeam){
       state.data.roster = await get('roster', { team: state.selectedTeam });
+    }
+    // allplayers is the full player universe (large) — only fetch it when
+    // the What-If tab is actually the one being viewed, not on every poll.
+    if (state.activeTab === 'whatif' && !state.data.allPlayers){
+      state.data.allPlayers = await get('allplayers');
     }
 
     clearError();
@@ -553,6 +557,15 @@ const MORE_TABS = [
 ];
 const TABS = PRIMARY_TABS.concat(MORE_TABS);
 
+async function loadDataForTab(){
+  if (TEAM_TABS.includes(state.activeTab) && !state.data.roster){
+    state.data.roster = await get('roster', { team: state.selectedTeam });
+  }
+  if (state.activeTab === 'whatif' && !state.data.allPlayers){
+    state.data.allPlayers = await get('allplayers');
+  }
+}
+
 function renderBottomNav(){
   const isMoreActive = MORE_TABS.some(t => t.id === state.activeTab);
   const activeMoreTab = MORE_TABS.find(t => t.id === state.activeTab);
@@ -568,9 +581,7 @@ function renderBottomNav(){
   document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
     btn.addEventListener('click', async () => {
       state.activeTab = btn.getAttribute('data-tab');
-      if (TEAM_TABS.includes(state.activeTab) && !state.data.roster){
-        state.data.roster = await get('roster', { team: state.selectedTeam });
-      }
+      await loadDataForTab();
       render();
     });
   });
@@ -596,9 +607,7 @@ function openMoreOverlay(){
     item.addEventListener('click', async () => {
       state.activeTab = item.getAttribute('data-more-tab');
       closeMoreOverlay();
-      if (TEAM_TABS.includes(state.activeTab) && !state.data.roster){
-        state.data.roster = await get('roster', { team: state.selectedTeam });
-      }
+      await loadDataForTab();
       render();
     });
   });
@@ -1031,13 +1040,21 @@ function renderWhatIf(){
 function renderWhatIfAddList(){
   const el = document.getElementById('whatIfAddList');
   if (!el) return;
-  let pool = state.data.allPlayers.players.filter(p => p.fantasyTeam !== state.selectedTeam);
+
   const search = state.ui.whatIfSearch.trim().toLowerCase();
+  const hasRealFilter = search || state.ui.whatIfTeamFilter !== 'all' || state.ui.whatIfPosFilter !== 'all';
+  if (!hasRealFilter){
+    el.innerHTML = '<div class="placeholder">Search a name or pick a filter above to browse players — the full player pool is too large to show all at once.</div>';
+    return;
+  }
+
+  let pool = state.data.allPlayers.players.filter(p => p.fantasyTeam !== state.selectedTeam);
   if (search) pool = pool.filter(p => p.player.toLowerCase().includes(search));
   if (state.ui.whatIfTeamFilter === 'fa') pool = pool.filter(p => !p.fantasyTeam);
   else if (state.ui.whatIfTeamFilter !== 'all') pool = pool.filter(p => p.fantasyTeam === state.ui.whatIfTeamFilter);
   if (state.ui.whatIfPosFilter !== 'all') pool = pool.filter(p => (p.position||'').toUpperCase() === state.ui.whatIfPosFilter);
   pool.sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
+  const totalMatches = pool.length;
   pool = pool.slice(0, 40);
 
   if (pool.length === 0){ el.innerHTML = '<div class="placeholder">No players match these filters.</div>'; return; }
@@ -1053,6 +1070,9 @@ function renderWhatIfAddList(){
         <span class="action-icon add">${isAdded?'↺':'+'}</span>
       </div>`;
   }).join('');
+  if (totalMatches > 40){
+    el.innerHTML += `<div class="placeholder" style="padding:10px 12px;">Showing 40 of ${totalMatches} matches — narrow your search further to see more specific results.</div>`;
+  }
 
   el.querySelectorAll('[data-toggle-add]').forEach(row => {
     row.addEventListener('click', () => {
