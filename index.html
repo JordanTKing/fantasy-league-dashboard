@@ -123,7 +123,16 @@
   .list{ padding:6px 10px 8px; min-height:60px; }
   .row{ display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:10px; }
   .row:hover{ background:var(--paper-dim); }
-  .row.selected{ background:rgba(201,162,75,.16); border:1.5px solid var(--brass); }
+  .row.selected{
+    background:rgba(201,162,75,.24); border:2px solid var(--brass);
+    box-shadow:0 0 0 3px rgba(201,162,75,.12);
+  }
+  .row.selected .rname .n{ font-weight:800; }
+  .row.selected .check-badge{
+    flex:none; width:20px; height:20px; border-radius:50%; background:var(--brass);
+    color:#3b2c0e; display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:800;
+  }
   .row.is-exempt{ background:rgba(201,162,75,.12); }
   .row.mine{ background:rgba(201,162,75,.14); }
   .row.removing{ background:rgba(179,64,47,.1); text-decoration:line-through; opacity:.7; }
@@ -204,13 +213,13 @@
   .primary-btn:hover{ opacity:.92; }
   .primary-btn:disabled{ opacity:.45; cursor:default; }
   .primary-btn.margined{ margin:16px 22px 20px; width:calc(100% - 44px); }
-  .pin-row{ display:flex; gap:8px; padding:0 22px 14px; }
+  .pin-row{ display:flex; flex-direction:column; gap:8px; padding:0 22px 14px; }
   .pin-row input{
-    flex:1; padding:10px 12px; border-radius:9px; border:1px solid var(--line);
+    width:100%; padding:10px 12px; border-radius:9px; border:1px solid var(--line);
     background:#fff; font-family:'Inter',sans-serif; font-size:14px; color:var(--ink);
   }
   .pin-row button{
-    flex:none; padding:0 16px; border-radius:9px; border:none; background:var(--ink);
+    width:100%; padding:11px 16px; border-radius:9px; border:none; background:var(--ink);
     color:var(--paper); font-weight:600; font-size:13px; cursor:pointer;
   }
   .pin-row button:disabled{ opacity:.45; }
@@ -1083,6 +1092,7 @@ function renderExempt(){
         <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
         <span class="rname"><span class="n">${p.player}${p.isRookie?'<span class="tag rookie">ROOKIE</span>':''}</span><span class="t"> · ${p.nflTeam||'—'}</span></span>
         <span class="rsal">$${p.salary}</span>
+        ${sel ? '<span class="check-badge">✓</span>' : ''}
       </div>`;
   }).join('');
 
@@ -1096,10 +1106,10 @@ function renderExempt(){
         <div class="preview-arrow">↓ if ${state.ui.exemptSelectedPlayer} becomes exempt ($0)</div>
         <div class="preview-row new"><span class="k">New team salary</span><span class="v">${fmtMoney(newTotal)}</span></div>
       </div>
-      <label style="margin:0 22px 4px;">Your PIN, to confirm</label>
+      <label style="margin:0 22px 4px;">Enter your PIN to submit</label>
       <div class="pin-row">
         <input type="password" inputmode="numeric" id="exemptPinInput" placeholder="PIN" value="${state.ui.exemptPin}">
-        <button id="exemptSubmitBtn">${existing ? 'Update Pick' : 'Lock In Pick'}</button>
+        <button id="exemptSubmitBtn">Submit</button>
       </div>`;
   } else {
     previewHtml = `<div class="placeholder">Tap a player to preview your cap impact here.</div>`;
@@ -1140,7 +1150,7 @@ function attachExemptHandlers(){
       const pinInput = document.getElementById('exemptPinInput');
       state.ui.exemptPin = pinInput.value.trim();
       if (!state.ui.exemptPin){
-        document.getElementById('exemptErrBox').innerHTML = `<div class="err-box">Enter your PIN to confirm.</div>`;
+        document.getElementById('exemptErrBox').innerHTML = `<div class="err-box">PIN required to submit</div>`;
         return;
       }
       submitBtn.disabled = true; submitBtn.textContent = 'Submitting…';
@@ -1151,7 +1161,7 @@ function attachExemptHandlers(){
         render();
       } catch (err){
         document.getElementById('exemptErrBox').innerHTML = `<div class="err-box"><b>Submission failed:</b> ${err.message}</div>`;
-        submitBtn.disabled = false; submitBtn.textContent = 'Lock In Pick';
+        submitBtn.disabled = false; submitBtn.textContent = 'Submit';
       }
     });
   }
