@@ -44,8 +44,9 @@
   .commish-pill{
     flex:none; padding:10px 12px; border-radius:10px; border:1px solid var(--line);
     background:var(--paper); font-family:'IBM Plex Mono',monospace; font-size:11px;
-    color:var(--ink-soft); cursor:pointer;
+    color:var(--ink-soft); cursor:pointer; display:flex; align-items:center; justify-content:center;
   }
+  .commish-pill svg{ width:17px; height:17px; display:block; }
   .commish-pill.active{ background:var(--brass); color:#3b2c0e; border-color:var(--brass); }
 
   .card{
@@ -340,7 +341,8 @@
     font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--ink-soft);
     letter-spacing:.01em;
   }
-  .nav-btn .ic{ font-size:17px; line-height:1; }
+  .nav-btn .ic{ line-height:1; }
+  .nav-btn .ic svg{ width:17px; height:17px; display:block; margin:0 auto; }
   .nav-btn.active{ color:var(--brass-deep); }
 
   /* =====================================================================
@@ -372,7 +374,7 @@
       font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ink-soft);
       border-left:3px solid transparent;
     }
-    .sidebar-nav-btn .ic{ font-size:16px; }
+    .sidebar-nav-btn .ic svg{ width:16px; height:16px; display:block; }
     .sidebar-nav-btn:hover{ background:var(--paper-dim); }
     .sidebar-nav-btn.active{ color:var(--brass-deep); border-left-color:var(--brass); background:var(--paper-dim); font-weight:600; }
 
@@ -418,7 +420,7 @@
     .whatif-desktop-split{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
 
     /* Dues/Payouts: paired sub-cards side by side */
-    .dues-desktop-pair{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .dues-desktop-pair{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
     .dues-desktop-pair .card{ margin-bottom:0; }
 
     /* Standings: two snapshot tables side by side */
@@ -468,7 +470,7 @@
     border-radius:14px; border:1px solid var(--line); background:var(--paper-dim);
     cursor:pointer; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink);
   }
-  .more-item .ic{ font-size:22px; }
+  .more-item .ic svg{ width:22px; height:22px; display:block; }
   .more-item.active{ border-color:var(--brass); background:rgba(201,162,75,.14); color:var(--brass-deep); }
 </style>
 </head>
@@ -650,18 +652,31 @@ document.getElementById('commishToggleBtn').addEventListener('click', () => {
   render();
 });
 
+const ICONS = {
+  team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 5 6v3h2v10h10V9h2V6l-4-3-2 2h-2z"/></svg>',
+  league: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="20" x2="5" y2="11"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="14"/></svg>',
+  picks: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.3"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>',
+  movers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,17 10,11 14,15 20,7"/><polyline points="14,7 20,7 20,13"/></svg>',
+  exempt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M6.5 3h11a.5.5 0 0 1 .5.5V21l-6-4.2L6 21V3.5a.5.5 0 0 1 .5-.5z"/></svg>',
+  whatif: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3h4"/><path d="M10.5 3v6L5.4 18a1.3 1.3 0 0 0 1.1 2h11a1.3 1.3 0 0 0 1.1-2L13.5 9V3"/><line x1="8" y1="14.5" x2="16" y2="14.5"/></svg>',
+  dues: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.3" stroke-linecap="butt"/><path d="M12 7.3v9.4M14.7 9.6c0-1.2-1.2-2.1-2.7-2.1s-2.7.9-2.7 2c0 2.6 5.4 1.3 5.4 3.9 0 1.1-1.2 2.1-2.7 2.1s-2.7-.9-2.7-2.1"/></svg>',
+  standings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v4.5a4 4 0 0 1-8 0V4z"/><path d="M8 5.2H5.3A2.6 2.6 0 0 0 8 8.6"/><path d="M16 5.2h2.7A2.6 2.6 0 0 1 16 8.6"/><line x1="12" y1="12.5" x2="12" y2="16.5"/><line x1="8.7" y1="19.5" x2="15.3" y2="19.5"/><line x1="12" y1="16.5" x2="12" y2="19.5"/></svg>',
+  commish: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.7"/><path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20M6.5 6.5l1.5 1.5M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
+};
+
 const PRIMARY_TABS = [
-  { id: 'team', icon: '🏈', label: 'Team' },
-  { id: 'league', icon: '📊', label: 'League' },
-  { id: 'whatif', icon: '🔮', label: 'What-If' },
+  { id: 'team', icon: ICONS.team, label: 'Team' },
+  { id: 'league', icon: ICONS.league, label: 'League' },
+  { id: 'whatif', icon: ICONS.whatif, label: 'What-If' },
 ];
 const MORE_TABS = [
-  { id: 'picks', icon: '🎯', label: 'Picks' },
-  { id: 'movers', icon: '📈', label: 'Movers' },
-  { id: 'exempt', icon: '🔖', label: 'Exempt' },
-  { id: 'dues', icon: '💵', label: 'Dues' },
-  { id: 'standings', icon: '🏆', label: 'Standings' },
-  { id: 'commish', icon: '🛠️', label: 'Commish' },
+  { id: 'picks', icon: ICONS.picks, label: 'Picks' },
+  { id: 'movers', icon: ICONS.movers, label: 'Movers' },
+  { id: 'exempt', icon: ICONS.exempt, label: 'Exempt' },
+  { id: 'dues', icon: ICONS.dues, label: 'Dues' },
+  { id: 'standings', icon: ICONS.standings, label: 'Standings' },
+  { id: 'commish', icon: ICONS.commish, label: 'Commish' },
 ];
 const TABS = PRIMARY_TABS.concat(MORE_TABS);
 
@@ -693,7 +708,7 @@ function renderBottomNav(){
   renderSidebarNav();
   const isMoreActive = MORE_TABS.some(t => t.id === state.activeTab);
   const activeMoreTab = MORE_TABS.find(t => t.id === state.activeTab);
-  const moreIcon = activeMoreTab ? activeMoreTab.icon : '⋯';
+  const moreIcon = activeMoreTab ? activeMoreTab.icon : ICONS.more;
   const moreLabel = activeMoreTab ? activeMoreTab.label : 'More';
 
   const items = PRIMARY_TABS.map(t =>
@@ -1344,7 +1359,14 @@ function renderDues(){
       ${isCommish ? `<button class="paid-toggle ${x.paid?'yes':'no'}" data-toggle-team="${x.team}" data-paid="${x.paid}">${x.paid?'Paid':'Unpaid'}</button>` : `<span class="paid-pill ${x.paid?'yes':'no'}">${x.paid?'Paid':'Unpaid'}</span>`}
     </div>`;
   });
-  teamDuesCard += `</div></div>`;
+  teamDuesCard += `</div>`;
+  if (d.duesTotals && (d.duesTotals.anticipated !== null || d.duesTotals.actual !== null)){
+    teamDuesCard += `<div class="pot-box" style="margin-top:0;">
+      <div class="pot-row"><span class="k">Anticipated total (if all paid)</span><span class="v">${fmtMoney(d.duesTotals.anticipated)}</span></div>
+      <div class="pot-row"><span class="k">Actual collected so far</span><span class="v">${fmtMoney(d.duesTotals.actual)}</span></div>
+    </div>`;
+  }
+  teamDuesCard += `</div>`;
 
   let weeklyCard = `<div class="card"><div class="card-head"><p class="eyebrow">Weekly High Score</p><h1>$25 Pot</h1></div><div class="list">`;
   d.weeklyHighScore.forEach(w => {
@@ -1368,8 +1390,9 @@ function renderDues(){
   }
   playoffCard += `<div class="list">`;
   d.playoffPayout.forEach(p => {
+    const pctLabel = typeof p.pct === 'number' ? ' · ' + Math.round(p.pct*100) + '%' : ' · Entry Fee Refund';
     playoffCard += `<div class="row">
-      <div class="rname"><span class="n">${p.place} Place${p.pct?' · '+Math.round(p.pct*100)+'%':''}</span><span class="t"> · ${p.winner||'TBD'}</span></div>
+      <div class="rname"><span class="n">${p.place} Place${pctLabel}</span><span class="t"> · ${p.winner||'TBD'}</span></div>
       <span class="rsal">${fmtMoney(p.actual)}</span>
       ${isCommish ? `<button class="paid-toggle ${p.paid?'yes':'no'}" data-toggle-place="${p.place}" data-paid="${p.paid}">${p.paid?'Paid':'Unpaid'}</button>` : `<span class="paid-pill ${p.paid?'yes':'no'}">${p.paid?'Paid':'Unpaid'}</span>`}
     </div>`;
@@ -1711,6 +1734,7 @@ function attachCommishHandlers(){
   if (rb) rb.addEventListener('click', () => refreshAll(false));
 }
 
+document.getElementById('commishToggleBtn').innerHTML = ICONS.commish;
 render();
 refreshAll(true);
 setInterval(() => refreshAll(false), POLL_MS);
