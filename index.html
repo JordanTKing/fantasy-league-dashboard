@@ -1467,10 +1467,10 @@ function emptyBracket(){
 function bracketTeamName(b, seedNum){ return (b.seeds && b.seeds[seedNum]) || `Seed ${seedNum}`; }
 
 function renderStandingsTab(){
-  let html = `<div class="card" style="padding-top:6px;">
-    <div class="underline-tabs" style="border-bottom:none; padding-bottom:10px;">
-      <button class="u-tab${state.ui.standingsView==='standings'?' active':''}" data-sview="standings">Standings</button>
-      <button class="u-tab${state.ui.standingsView==='bracket'?' active':''}" data-sview="bracket">Bracket</button>
+  let html = `<div class="card" style="padding-bottom:14px;">
+    <div class="toggle-row" style="padding:14px 22px 0;">
+      <button class="toggle-btn${state.ui.standingsView==='standings'?' active':''}" data-sview="standings">Standings</button>
+      <button class="toggle-btn${state.ui.standingsView==='bracket'?' active':''}" data-sview="bracket">Bracket</button>
     </div>
   </div>`;
   if (state.ui.standingsView === 'standings') html += renderStandingsSnapshots();
