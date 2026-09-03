@@ -280,6 +280,24 @@
   .mteam .tname{ flex:1; font-size:13.5px; }
   .mteam .tscore{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:14px; flex:none; }
   .mteam .trophy{ margin-left:4px; }
+
+  /* ---- Championship celebration ---- */
+  .champion-card{
+    border:2px solid var(--brass) !important;
+    background:linear-gradient(180deg, var(--paper) 0%, #f5ecd4 100%) !important;
+    box-shadow:0 24px 48px -18px rgba(0,0,0,.55), 0 0 0 4px rgba(201,162,75,.14) !important;
+  }
+  .champion-card .card-head{ border-bottom-color:var(--brass); }
+  .champion-card .eyebrow{ color:var(--brass-deep); font-size:11.5px; }
+  .matchup.celebrate{ border-width:2px; }
+  .matchup.celebrate .mteam{ padding:14px 16px; }
+  .matchup.celebrate .mteam.winner{
+    background:linear-gradient(90deg, rgba(201,162,75,.28), rgba(201,162,75,.12));
+    font-weight:800;
+  }
+  .matchup.celebrate .mteam.winner .tname{ font-size:16px; }
+  .matchup.celebrate .mteam.winner .tscore{ font-size:17px; color:var(--brass-deep); }
+  .matchup.celebrate .mteam .trophy{ font-size:16px; }
   .mdivider{ height:1px; background:var(--line); }
   .bye-note{
     margin:0 22px 12px; padding:12px 14px; border:1px dashed var(--line); border-radius:12px;
@@ -1449,9 +1467,11 @@ function emptyBracket(){
 function bracketTeamName(b, seedNum){ return (b.seeds && b.seeds[seedNum]) || `Seed ${seedNum}`; }
 
 function renderStandingsTab(){
-  let html = `<div class="underline-tabs">
-    <button class="u-tab${state.ui.standingsView==='standings'?' active':''}" data-sview="standings">Standings</button>
-    <button class="u-tab${state.ui.standingsView==='bracket'?' active':''}" data-sview="bracket">Bracket</button>
+  let html = `<div class="card" style="padding-top:6px;">
+    <div class="underline-tabs" style="border-bottom:none; padding-bottom:10px;">
+      <button class="u-tab${state.ui.standingsView==='standings'?' active':''}" data-sview="standings">Standings</button>
+      <button class="u-tab${state.ui.standingsView==='bracket'?' active':''}" data-sview="bracket">Bracket</button>
+    </div>
   </div>`;
   if (state.ui.standingsView === 'standings') html += renderStandingsSnapshots();
   else html += state.ui.bracketEditMode ? renderBracketEdit() : renderBracketReadOnly();
@@ -1484,15 +1504,17 @@ function renderStandingsSnapshots(){
   return `<div class="standings-desktop-pair">${regCard}${finalCard}</div>`;
 }
 
-function matchupHtml(team1, team2, g){
+function matchupHtml(team1, team2, g, celebrate){
   const decided = g.winner !== null && g.winner !== undefined;
   const w1 = decided && g.winner === 1;
   const w2 = decided && g.winner === 2;
+  const cls = celebrate ? ' celebrate' : '';
+  const trophyIcon = celebrate ? '🏆' : '✓';
   return `
-    <div class="matchup${decided?' decided':''}">
-      <div class="mteam${w1?' winner':''}"><span class="tname">${team1||'TBD'}</span><span class="tscore">${g.score1??'—'}</span>${w1?'<span class="trophy">✓</span>':''}</div>
+    <div class="matchup${decided?' decided':''}${cls}">
+      <div class="mteam${w1?' winner':''}"><span class="tname">${team1||'TBD'}</span><span class="tscore">${g.score1??'—'}</span>${w1?'<span class="trophy">'+trophyIcon+'</span>':''}</div>
       <div class="mdivider"></div>
-      <div class="mteam${w2?' winner':''}"><span class="tname">${team2||'TBD'}</span><span class="tscore">${g.score2??'—'}</span>${w2?'<span class="trophy">✓</span>':''}</div>
+      <div class="mteam${w2?' winner':''}"><span class="tname">${team2||'TBD'}</span><span class="tscore">${g.score2??'—'}</span>${w2?'<span class="trophy">'+trophyIcon+'</span>':''}</div>
     </div>`;
 }
 
@@ -1515,9 +1537,13 @@ function renderBracketReadOnly(){
     <div class="round-label">Round 2 — Week 16</div><p class="subtext" style="padding:0 22px 8px;">Re-seeded from that week's actual CBS matchups.</p>
     ${matchupHtml(b.round2.a.team1, b.round2.a.team2, b.round2.a)}
     ${matchupHtml(b.round2.b.team1, b.round2.b.team2, b.round2.b)}
-    <div class="round-label">Championship — Week 17</div>
-    ${matchupHtml(b.championship.team1, b.championship.team2, b.championship)}
-    <div class="round-label">Third Place Game — Week 17</div>
+  </div>
+  <div class="card champion-card">
+    <div class="card-head"><p class="eyebrow">🏆 Championship — Week 17</p><h1>League Title</h1></div>
+    ${matchupHtml(b.championship.team1, b.championship.team2, b.championship, true)}
+  </div>
+  <div class="card">
+    <div class="card-head"><p class="eyebrow">Third Place Game</p><h1 style="font-size:19px;">Week 17</h1></div>
     ${matchupHtml(b.thirdPlace.team1, b.thirdPlace.team2, b.thirdPlace)}
     <div class="card-foot"><span>Entered by commissioner</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
   </div>`;
@@ -1536,9 +1562,9 @@ function renderBracketReadOnly(){
       ${matchupHtml(b.round2.a.team1, b.round2.a.team2, b.round2.a)}
       ${matchupHtml(b.round2.b.team1, b.round2.b.team2, b.round2.b)}
     </div>
-    <div class="card">
-      <div class="card-head"><p class="eyebrow">Championship</p><h1 style="font-size:19px;">Week 17</h1></div>
-      ${matchupHtml(b.championship.team1, b.championship.team2, b.championship)}
+    <div class="card champion-card">
+      <div class="card-head"><p class="eyebrow">🏆 Championship</p><h1 style="font-size:19px;">Week 17</h1></div>
+      ${matchupHtml(b.championship.team1, b.championship.team2, b.championship, true)}
     </div>
     <div class="card">
       <div class="card-head"><p class="eyebrow">Third Place</p><h1 style="font-size:19px;">Week 17</h1></div>
