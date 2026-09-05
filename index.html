@@ -560,6 +560,11 @@ const state = {
     whatIfSearch: '',
     whatIfTeamFilter: 'all',
     whatIfPosFilter: 'all',
+    directorySearch: '',
+    directoryTeamFilter: 'all',
+    directoryPosFilter: 'all',
+    directoryRookieFilter: 'all',
+    directorySort: 'position',
     standingsView: 'standings',
     bracketEditMode: false,
     bracketDraft: null,
@@ -626,7 +631,7 @@ async function refreshAll(isInitial){
     }
     // allplayers is the full player universe (large) — only fetch it when
     // the What-If tab is actually the one being viewed, not on every poll.
-    if (state.activeTab === 'whatif' && !state.data.allPlayers){
+    if (ALL_PLAYERS_TABS.includes(state.activeTab) && !state.data.allPlayers){
       state.data.allPlayers = await get('allplayers');
     }
 
@@ -689,6 +694,7 @@ const ICONS = {
   dues: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="8.3" stroke-linecap="butt"/><path d="M12 7.3v9.4M14.7 9.6c0-1.2-1.2-2.1-2.7-2.1s-2.7.9-2.7 2c0 2.6 5.4 1.3 5.4 3.9 0 1.1-1.2 2.1-2.7 2.1s-2.7-.9-2.7-2.1"/></svg>',
   standings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v4.5a4 4 0 0 1-8 0V4z"/><path d="M8 5.2H5.3A2.6 2.6 0 0 0 8 8.6"/><path d="M16 5.2h2.7A2.6 2.6 0 0 1 16 8.6"/><line x1="12" y1="12.5" x2="12" y2="16.5"/><line x1="8.7" y1="19.5" x2="15.3" y2="19.5"/><line x1="12" y1="16.5" x2="12" y2="19.5"/></svg>',
   commish: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.7"/><path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20M6.5 6.5l1.5 1.5M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5"/></svg>',
+  directory: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="14" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/><circle cx="18" cy="16" r="3"/><line x1="20.3" y1="18.3" x2="22" y2="20"/></svg>',
   more: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
 };
 
@@ -701,17 +707,19 @@ const MORE_TABS = [
   { id: 'picks', icon: ICONS.picks, label: 'Picks' },
   { id: 'movers', icon: ICONS.movers, label: 'Movers' },
   { id: 'exempt', icon: ICONS.exempt, label: 'Exempt' },
+  { id: 'directory', icon: ICONS.directory, label: 'Players' },
   { id: 'dues', icon: ICONS.dues, label: 'Dues' },
   { id: 'standings', icon: ICONS.standings, label: 'Standings' },
   { id: 'commish', icon: ICONS.commish, label: 'Commish' },
 ];
 const TABS = PRIMARY_TABS.concat(MORE_TABS);
+const ALL_PLAYERS_TABS = ['whatif', 'directory'];
 
 async function loadDataForTab(){
   if (TEAM_TABS.includes(state.activeTab) && !state.data.roster){
     state.data.roster = await get('roster', { team: state.selectedTeam });
   }
-  if (state.activeTab === 'whatif' && !state.data.allPlayers){
+  if (ALL_PLAYERS_TABS.includes(state.activeTab) && !state.data.allPlayers){
     state.data.allPlayers = await get('allplayers');
   }
 }
@@ -805,6 +813,7 @@ function render(){
     case 'whatif': root.innerHTML = renderWhatIf(); attachWhatIfHandlers(); break;
     case 'dues': root.innerHTML = renderDues(); attachDuesHandlers(); break;
     case 'standings': root.innerHTML = renderStandingsTab(); attachStandingsHandlers(); break;
+    case 'directory': root.innerHTML = renderDirectory(); attachDirectoryHandlers(); break;
     case 'commish': root.innerHTML = renderCommish(); attachCommishHandlers(); break;
   }
 }
@@ -1347,6 +1356,94 @@ function attachWhatIfHandlers(){
   document.getElementById('whatIfSearch').addEventListener('input', (e) => { state.ui.whatIfSearch = e.target.value; renderWhatIfAddList(); });
   document.getElementById('whatIfTeamFilter').addEventListener('change', (e) => { state.ui.whatIfTeamFilter = e.target.value; renderWhatIfAddList(); });
   document.getElementById('whatIfPosFilter').addEventListener('change', (e) => { state.ui.whatIfPosFilter = e.target.value; renderWhatIfAddList(); });
+  const rb = document.getElementById('refreshBtn');
+  if (rb) rb.addEventListener('click', () => refreshAll(false));
+}
+
+/* =====================================================================
+   PLAYER DIRECTORY — standalone research tool, no add/remove actions
+   ===================================================================== */
+function renderDirectory(){
+  if (!state.data.allPlayers) return `<div class="card"><div class="placeholder">Loading players…</div></div>`;
+
+  return `<div class="card">
+    <div class="card-head">
+      <p class="eyebrow">Player Directory</p>
+      <h1>Research</h1>
+      <p class="subtext">Search or filter the full player pool — salaries, positions, and ownership at a glance.</p>
+    </div>
+    <div class="filters">
+      <input class="search" id="dirSearch" placeholder="Search player name…" value="${state.ui.directorySearch}">
+      <select id="dirTeamFilter">
+        <option value="all"${state.ui.directoryTeamFilter==='all'?' selected':''}>All Teams / FA</option>
+        <option value="fa"${state.ui.directoryTeamFilter==='fa'?' selected':''}>Free Agents Only</option>
+        ${state.data.salaryCap.teams.map(t => `<option value="${t.team}"${state.ui.directoryTeamFilter===t.team?' selected':''}>${t.team}</option>`).join('')}
+      </select>
+      <select id="dirPosFilter">
+        <option value="all"${state.ui.directoryPosFilter==='all'?' selected':''}>All Positions</option>
+        ${['QB','RB','WR','TE','K','DST'].map(p => `<option value="${p}"${state.ui.directoryPosFilter===p?' selected':''}>${p}</option>`).join('')}
+      </select>
+      <select id="dirRookieFilter">
+        <option value="all"${state.ui.directoryRookieFilter==='all'?' selected':''}>All Players</option>
+        <option value="rookie"${state.ui.directoryRookieFilter==='rookie'?' selected':''}>Rookies Only</option>
+      </select>
+    </div>
+    <div class="toggle-row">
+      <button class="toggle-btn${state.ui.directorySort==='position'?' active':''}" data-dsort="position">By Position</button>
+      <button class="toggle-btn${state.ui.directorySort==='salary'?' active':''}" data-dsort="salary">By Salary</button>
+      <button class="toggle-btn${state.ui.directorySort==='name'?' active':''}" data-dsort="name">A–Z</button>
+    </div>
+    <div class="list" id="dirList"></div>
+    <div class="card-foot"><span>SOURCE: PlayerList_Current</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
+  </div>`;
+}
+
+function renderDirectoryList(){
+  const el = document.getElementById('dirList');
+  if (!el) return;
+
+  let pool = [...state.data.allPlayers.players];
+  const search = state.ui.directorySearch.trim().toLowerCase();
+  if (search) pool = pool.filter(p => p.player.toLowerCase().includes(search));
+  if (state.ui.directoryTeamFilter === 'fa') pool = pool.filter(p => !p.fantasyTeam);
+  else if (state.ui.directoryTeamFilter !== 'all') pool = pool.filter(p => p.fantasyTeam === state.ui.directoryTeamFilter);
+  if (state.ui.directoryPosFilter !== 'all') pool = pool.filter(p => (p.position||'').toUpperCase() === state.ui.directoryPosFilter);
+  if (state.ui.directoryRookieFilter === 'rookie') pool = pool.filter(p => p.isRookie);
+
+  if (state.ui.directorySort === 'salary') pool.sort((a,b) => b.salary - a.salary);
+  else if (state.ui.directorySort === 'name') pool.sort((a,b) => a.player.localeCompare(b.player));
+  else pool.sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
+
+  const totalMatches = pool.length;
+  pool = pool.slice(0, 100);
+
+  if (pool.length === 0){ el.innerHTML = '<div class="placeholder">No players match these filters.</div>'; return; }
+
+  el.innerHTML = pool.map(p => {
+    const teamTag = p.fantasyTeam ? `<span class="tag team">${p.fantasyTeam}</span>` : `<span class="tag team fa">Free Agent</span>`;
+    const rookieTag = p.isRookie ? '<span class="tag rookie">ROOKIE</span>' : '';
+    const byeText = p.byeWeek ? `Bye ${p.byeWeek}` : 'Bye —';
+    return `
+      <div class="row">
+        <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
+        <span class="rname"><span class="n">${p.player}${rookieTag}${teamTag}</span><span class="t"> · ${p.nflTeam||'—'} · ${byeText}</span></span>
+        <span class="rsal">$${p.salary}</span>
+      </div>`;
+  }).join('');
+  if (totalMatches > 100){
+    el.innerHTML += `<div class="placeholder" style="padding:10px 12px;">Showing 100 of ${totalMatches} matches — narrow your search further to see more specific results.</div>`;
+  }
+}
+
+function attachDirectoryHandlers(){
+  renderDirectoryList();
+  document.querySelectorAll('[data-dsort]').forEach(btn => {
+    btn.addEventListener('click', () => { state.ui.directorySort = btn.getAttribute('data-dsort'); render(); });
+  });
+  document.getElementById('dirSearch').addEventListener('input', (e) => { state.ui.directorySearch = e.target.value; renderDirectoryList(); });
+  document.getElementById('dirTeamFilter').addEventListener('change', (e) => { state.ui.directoryTeamFilter = e.target.value; renderDirectoryList(); });
+  document.getElementById('dirPosFilter').addEventListener('change', (e) => { state.ui.directoryPosFilter = e.target.value; renderDirectoryList(); });
+  document.getElementById('dirRookieFilter').addEventListener('change', (e) => { state.ui.directoryRookieFilter = e.target.value; renderDirectoryList(); });
   const rb = document.getElementById('refreshBtn');
   if (rb) rb.addEventListener('click', () => refreshAll(false));
 }
