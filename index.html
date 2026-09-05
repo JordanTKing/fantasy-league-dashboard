@@ -544,7 +544,7 @@ const state = {
   selectedTeam: null,
   data: {
     salaryCap: null, roster: null, exemptSelections: null, checklist: null, config: null,
-    draftPicks: null, movers: null, allPlayers: null, duesPayouts: null, standings: null, bracket: null,
+    draftPicks: null, movers: null, allPlayers: null, adp: null, duesPayouts: null, standings: null, bracket: null,
   },
   ui: {
     teamSort: 'position',
@@ -630,9 +630,13 @@ async function refreshAll(isInitial){
       state.data.roster = await get('roster', { team: state.selectedTeam });
     }
     // allplayers is the full player universe (large) — only fetch it when
-    // the What-If tab is actually the one being viewed, not on every poll.
+    // the What-If or Directory tab is actually the one being viewed, not
+    // on every poll.
     if (ALL_PLAYERS_TABS.includes(state.activeTab) && !state.data.allPlayers){
       state.data.allPlayers = await get('allplayers');
+    }
+    if (state.activeTab === 'directory' && !state.data.adp){
+      state.data.adp = await get('adp');
     }
 
     clearError();
@@ -721,6 +725,9 @@ async function loadDataForTab(){
   }
   if (ALL_PLAYERS_TABS.includes(state.activeTab) && !state.data.allPlayers){
     state.data.allPlayers = await get('allplayers');
+  }
+  if (state.activeTab === 'directory' && !state.data.adp){
+    state.data.adp = await get('adp');
   }
 }
 
@@ -1391,6 +1398,7 @@ function renderDirectory(){
     <div class="toggle-row">
       <button class="toggle-btn${state.ui.directorySort==='position'?' active':''}" data-dsort="position">By Position</button>
       <button class="toggle-btn${state.ui.directorySort==='salary'?' active':''}" data-dsort="salary">By Salary</button>
+      <button class="toggle-btn${state.ui.directorySort==='adp'?' active':''}" data-dsort="adp">By ADP</button>
       <button class="toggle-btn${state.ui.directorySort==='name'?' active':''}" data-dsort="name">A–Z</button>
     </div>
     <div class="list" id="dirList"></div>
@@ -1402,7 +1410,18 @@ function renderDirectoryList(){
   const el = document.getElementById('dirList');
   if (!el) return;
 
-  let pool = [...state.data.allPlayers.players];
+  const adpByName = {};
+  if (state.data.adp) {
+    state.data.adp.players.forEach(p => {
+      const key = p.name.trim().toLowerCase();
+      adpByName[key] = p;
+    });
+  }
+
+  let pool = state.data.allPlayers.players.map(p => {
+    const adpEntry = adpByName[p.player.trim().toLowerCase()];
+    return { ...p, adp: adpEntry ? adpEntry.adp : null, adpPpr: adpEntry ? adpEntry.adpPpr : null };
+  });
   const search = state.ui.directorySearch.trim().toLowerCase();
   if (search) pool = pool.filter(p => p.player.toLowerCase().includes(search));
   if (state.ui.directoryTeamFilter === 'fa') pool = pool.filter(p => !p.fantasyTeam);
@@ -1412,6 +1431,7 @@ function renderDirectoryList(){
 
   if (state.ui.directorySort === 'salary') pool.sort((a,b) => b.salary - a.salary);
   else if (state.ui.directorySort === 'name') pool.sort((a,b) => a.player.localeCompare(b.player));
+  else if (state.ui.directorySort === 'adp') pool.sort((a,b) => (a.adpPpr ?? 9999) - (b.adpPpr ?? 9999));
   else pool.sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
 
   const totalMatches = pool.length;
@@ -1423,10 +1443,11 @@ function renderDirectoryList(){
     const teamTag = p.fantasyTeam ? `<span class="tag team">${p.fantasyTeam}</span>` : `<span class="tag team fa">Free Agent</span>`;
     const rookieTag = p.isRookie ? '<span class="tag rookie">ROOKIE</span>' : '';
     const byeText = p.byeWeek ? `Bye ${p.byeWeek}` : 'Bye —';
+    const adpText = p.adpPpr ? `ADP ${p.adpPpr}` : 'ADP —';
     return `
       <div class="row">
         <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
-        <span class="rname"><span class="n">${p.player}${rookieTag}${teamTag}</span><span class="t"> · ${p.nflTeam||'—'} · ${byeText}</span></span>
+        <span class="rname"><span class="n">${p.player}${rookieTag}${teamTag}</span><span class="t"> · ${p.nflTeam||'—'} · ${byeText} · ${adpText}</span></span>
         <span class="rsal">$${p.salary}</span>
       </div>`;
   }).join('');
