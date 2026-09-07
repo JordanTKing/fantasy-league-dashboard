@@ -597,6 +597,33 @@ function sortedRoster(roster, mode){
   return list;
 }
 
+/**
+ * Builds a lowercased-name -> {adp, adpPpr, ecrPpr} lookup from the
+ * currently-loaded ADP data, so every screen joins the same way instead
+ * of each re-implementing its own matching logic.
+ */
+function buildAdpLookup(){
+  const lookup = {};
+  if (state.data.adp) {
+    state.data.adp.players.forEach(p => { lookup[p.name.trim().toLowerCase()] = p; });
+  }
+  return lookup;
+}
+
+/**
+ * Cost Value = (1000 / ECR rank) / salary — see the Directory's own
+ * explainer for the full reasoning. Returns null when there's no ECR
+ * data to work with, rather than a fake number.
+ */
+function computeCostValue(ecrPpr, salary){
+  if (!ecrPpr || !salary || salary <= 0) return null;
+  return (1000 / ecrPpr) / salary;
+}
+
+function fmtCostValue(cv){
+  return cv !== null && cv !== undefined ? cv.toFixed(1) : '—';
+}
+
 const dot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 function setStatus(s, t){ dot.className='dot '+s; statusText.textContent=t; }
@@ -631,11 +658,11 @@ async function refreshAll(isInitial){
     }
     // allplayers is the full player universe (large) — only fetch it when
     // the What-If or Directory tab is actually the one being viewed, not
-    // on every poll.
+    // on every poll. adp/ECR data now also powers Cost Value on My Team.
     if (ALL_PLAYERS_TABS.includes(state.activeTab) && !state.data.allPlayers){
       state.data.allPlayers = await get('allplayers');
     }
-    if (state.activeTab === 'directory' && !state.data.adp){
+    if (ADP_TABS.includes(state.activeTab) && !state.data.adp){
       state.data.adp = await get('adp');
     }
 
@@ -718,6 +745,7 @@ const MORE_TABS = [
 ];
 const TABS = PRIMARY_TABS.concat(MORE_TABS);
 const ALL_PLAYERS_TABS = ['whatif', 'directory'];
+const ADP_TABS = ['team', 'whatif', 'directory'];
 
 async function loadDataForTab(){
   if (TEAM_TABS.includes(state.activeTab) && !state.data.roster){
@@ -726,7 +754,7 @@ async function loadDataForTab(){
   if (ALL_PLAYERS_TABS.includes(state.activeTab) && !state.data.allPlayers){
     state.data.allPlayers = await get('allplayers');
   }
-  if (state.activeTab === 'directory' && !state.data.adp){
+  if (ADP_TABS.includes(state.activeTab) && !state.data.adp){
     state.data.adp = await get('adp');
   }
 }
@@ -842,14 +870,28 @@ function renderMyTeam(){
   const arcColor = pct > 100 ? '#b3402f' : (pct > 90 ? '#c9a24b' : '#3f7d54');
 
   const sorted = sortedRoster(roster.roster, state.ui.teamSort);
+  const adpLookup = buildAdpLookup();
+  let totalCostValue = null;
+  let hasAnyCostValue = false;
+  sorted.forEach(p => {
+    const entry = adpLookup[p.player.trim().toLowerCase()];
+    const cv = entry ? computeCostValue(entry.ecrPpr, p.salary) : null;
+    if (cv !== null) { totalCostValue = (totalCostValue || 0) + cv; hasAnyCostValue = true; }
+  });
+
   const rows = sorted.map(p => {
     const isExempt = p.player === exemptPlayer;
     const note = (isExempt && !cbsUpdateDone) ? ' · pending $0 update' : '';
+    const entry = adpLookup[p.player.trim().toLowerCase()];
+    const cv = entry ? computeCostValue(entry.ecrPpr, p.salary) : null;
     return `
       <div class="row${isExempt ? ' is-exempt':''}">
         <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
         <span class="rname"><span class="n">${p.player}${isExempt?'<span class="tag exempt">EXEMPT</span>':''}</span><span class="t"> · ${p.nflTeam||'—'}${note}</span></span>
-        <span class="rsal">$${p.salary}</span>
+        <div style="text-align:right;">
+          <div class="rsal">$${p.salary}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);">CV ${fmtCostValue(cv)}</div>
+        </div>
       </div>`;
   }).join('');
 
@@ -874,6 +916,8 @@ function renderMyTeam(){
             <div class="cap-row"><span class="k">League cap</span><span class="v">${fmtMoney(info?info.cap:200)}</span></div>
             <div class="cap-divider"></div>
             <div class="cap-row"><span class="k">Remaining</span><span class="v ${info&&info.capSpace<0?'over':'accent'}">${fmtMoney(info?info.capSpace:0)}</span></div>
+            <div class="cap-divider"></div>
+            <div class="cap-row"><span class="k">Total Cost Value</span><span class="v" style="color:var(--brass-deep);">${hasAnyCostValue ? fmtCostValue(totalCostValue) : '—'}</span></div>
           </div>
         </div>
         <div class="card-foot" style="border-top:1px dashed var(--line);"><span>SOURCE: ${roster.salaryTabUsed}</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
@@ -1210,12 +1254,45 @@ function computeHypotheticalTotal(){
   return { baseTotal, hypTotal: baseTotal - removedSum + addedSum, cap: info ? info.cap : 200 };
 }
 
+/**
+ * Mirrors computeHypotheticalTotal, but for Cost Value instead of dollars
+ * — shows how much stronger or weaker the roster's overall bargain-ness
+ * gets under the hypothetical scenario, not just the cap math.
+ */
+function computeHypotheticalCostValue(){
+  const adpLookup = buildAdpLookup();
+  function cvFor(playerName, salary){
+    const entry = adpLookup[playerName.trim().toLowerCase()];
+    return entry ? computeCostValue(entry.ecrPpr, salary) : null;
+  }
+  let baseCV = 0, hasAny = false;
+  state.data.roster.roster.forEach(p => {
+    const cv = cvFor(p.player, p.salary);
+    if (cv !== null) { baseCV += cv; hasAny = true; }
+  });
+  let removedCV = 0;
+  state.data.roster.roster.forEach(p => {
+    if (state.ui.whatIfRemoved.has(p.player)) {
+      const cv = cvFor(p.player, p.salary);
+      if (cv !== null) removedCV += cv;
+    }
+  });
+  let addedCV = 0;
+  state.ui.whatIfAdded.forEach(p => {
+    const cv = cvFor(p.player, p.salary);
+    if (cv !== null) { addedCV += cv; hasAny = true; }
+  });
+  return { baseCV, hypCV: baseCV - removedCV + addedCV, hasAny, adpLookup, cvFor };
+}
+
 function renderWhatIf(){
   if (!state.data.roster || !state.data.allPlayers) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
 
   const { baseTotal, hypTotal, cap } = computeHypotheticalTotal();
   const overCap = hypTotal > cap;
   const space = cap - hypTotal;
+  const { baseCV, hypCV, hasAny, cvFor } = computeHypotheticalCostValue();
+  const cvDelta = hypCV - baseCV;
 
   let html = `<div class="card">
     <div class="card-head">
@@ -1229,6 +1306,12 @@ function renderWhatIf(){
       <div class="cap-block"><div class="lbl">Hypothetical</div><div class="val ${overCap?'over':'good'}">${fmtMoney(hypTotal)}</div></div>
       <div class="cap-block"><div class="lbl">Cap Space</div><div class="val ${space<0?'over':'good'}">${space<0?'−':''}${fmtMoney(Math.abs(space))}</div></div>
     </div>
+    <div class="cap-summary" style="border-top:1px dashed var(--line);">
+      <div class="cap-block"><div class="lbl">Current Cost Value</div><div class="val">${hasAny ? fmtCostValue(baseCV) : '—'}</div></div>
+      <div class="cap-arrow">→</div>
+      <div class="cap-block"><div class="lbl">Hypothetical CV</div><div class="val" style="color:var(--brass-deep);">${hasAny ? fmtCostValue(hypCV) : '—'}</div></div>
+      <div class="cap-block"><div class="lbl">CV Change</div><div class="val ${cvDelta<0?'over':'good'}">${hasAny ? (cvDelta>=0?'+':'') + fmtCostValue(cvDelta) : '—'}</div></div>
+    </div>
   </div>`;
 
   // ---- Left: Added-this-scenario + Your Roster ----
@@ -1239,11 +1322,15 @@ function renderWhatIf(){
       const teamTag = p.fantasyTeam
         ? `<span class="tag team">via ${p.fantasyTeam}</span>`
         : `<span class="tag team fa">Free Agent</span>`;
+      const cv = cvFor(p.player, p.salary);
       return `
         <div class="row adding clickable" data-remove-added="${p.player}">
           <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
           <span class="rname"><span class="n">${p.player}${teamTag}</span><span class="t"> · ${p.nflTeam||'—'}</span></span>
-          <span class="rsal">$${p.salary}</span>
+          <div style="text-align:right;">
+            <div class="rsal">$${p.salary}</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);">CV ${fmtCostValue(cv)}</div>
+          </div>
           <span class="action-icon remove">✕</span>
         </div>`;
     }).join('');
@@ -1253,11 +1340,15 @@ function renderWhatIf(){
   const sortedRosterList = [...state.data.roster.roster].sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
   leftCard += sortedRosterList.map(p => {
     const isRemoved = state.ui.whatIfRemoved.has(p.player);
+    const cv = cvFor(p.player, p.salary);
     return `
       <div class="row clickable${isRemoved?' removing':''}" data-toggle-remove="${p.player}">
         <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
         <span class="rname"><span class="n">${p.player}</span><span class="t"> · ${p.nflTeam||'—'}</span></span>
-        <span class="rsal">$${p.salary}</span>
+        <div style="text-align:right;">
+          <div class="rsal">$${p.salary}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);">CV ${fmtCostValue(cv)}</div>
+        </div>
         <span class="action-icon remove">${isRemoved?'↺':'✕'}</span>
       </div>`;
   }).join('');
@@ -1311,14 +1402,20 @@ function renderWhatIfAddList(){
 
   if (pool.length === 0){ el.innerHTML = '<div class="placeholder">No players match these filters.</div>'; return; }
 
+  const adpLookup = buildAdpLookup();
   el.innerHTML = pool.map(p => {
     const isAdded = state.ui.whatIfAdded.some(a => a.player === p.player);
     const teamTag = p.fantasyTeam ? `<span class="tag team">${p.fantasyTeam}</span>` : `<span class="tag team fa">Free Agent</span>`;
+    const entry = adpLookup[p.player.trim().toLowerCase()];
+    const cv = entry ? computeCostValue(entry.ecrPpr, p.salary) : null;
     return `
       <div class="row clickable${isAdded?' adding':''}" data-toggle-add="${p.player}">
         <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
         <span class="rname"><span class="n">${p.player}${teamTag}</span><span class="t"> · ${p.nflTeam||'—'}</span></span>
-        <span class="rsal">$${p.salary}</span>
+        <div style="text-align:right;">
+          <div class="rsal">$${p.salary}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);">CV ${fmtCostValue(cv)}</div>
+        </div>
         <span class="action-icon add">${isAdded?'↺':'+'}</span>
       </div>`;
   }).join('');
