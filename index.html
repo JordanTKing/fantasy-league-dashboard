@@ -536,7 +536,7 @@
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbxVGwkt88noCmju0w9z8RhJdWFBSx9TMjJOZPp2MHpIpXQ006WG69kWyMxGKveprg-RMg/exec";
 const POLL_MS = 75000;
 const POSITION_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3, K: 4, DST: 5 };
-const TEAM_TABS = ['team', 'picks', 'exempt', 'whatif'];
+const TEAM_TABS = ['team', 'picks', 'exempt', 'whatif', 'bigbets'];
 const COMMISH_TABS = ['dues', 'standings', 'commish'];
 
 const state = {
@@ -544,7 +544,7 @@ const state = {
   selectedTeam: null,
   data: {
     salaryCap: null, roster: null, exemptSelections: null, checklist: null, config: null,
-    draftPicks: null, movers: null, allPlayers: null, adp: null, duesPayouts: null, standings: null, bracket: null,
+    draftPicks: null, movers: null, allPlayers: null, adp: null, duesPayouts: null, standings: null, bracket: null, bigbets: null,
   },
   ui: {
     teamSort: 'position',
@@ -564,6 +564,7 @@ const state = {
     directoryTeamFilter: 'all',
     directoryPosFilter: 'all',
     directoryRookieFilter: 'all',
+    bigBetsPin: '',
     directorySort: 'position',
     standingsView: 'standings',
     bracketEditMode: false,
@@ -665,6 +666,11 @@ async function refreshAll(isInitial){
     if (ADP_TABS.includes(state.activeTab) && !state.data.adp){
       state.data.adp = await get('adp');
     }
+    // bigbets is small, so it's refetched every poll cycle (not just
+    // once) so other teams' newly-submitted bets show up live.
+    if (state.activeTab === 'bigbets'){
+      state.data.bigbets = await get('bigbets');
+    }
 
     clearError();
     setStatus('ok', 'synced ' + new Date().toLocaleTimeString());
@@ -726,6 +732,7 @@ const ICONS = {
   standings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v4.5a4 4 0 0 1-8 0V4z"/><path d="M8 5.2H5.3A2.6 2.6 0 0 0 8 8.6"/><path d="M16 5.2h2.7A2.6 2.6 0 0 1 16 8.6"/><line x1="12" y1="12.5" x2="12" y2="16.5"/><line x1="8.7" y1="19.5" x2="15.3" y2="19.5"/><line x1="12" y1="16.5" x2="12" y2="19.5"/></svg>',
   commish: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.7"/><path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20M6.5 6.5l1.5 1.5M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5"/></svg>',
   directory: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="14" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/><circle cx="18" cy="16" r="3"/><line x1="20.3" y1="18.3" x2="22" y2="20"/></svg>',
+  bigbets: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h12l-3 4 3 4H5"/></svg>',
   more: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
 };
 
@@ -739,6 +746,7 @@ const MORE_TABS = [
   { id: 'movers', icon: ICONS.movers, label: 'Movers' },
   { id: 'exempt', icon: ICONS.exempt, label: 'Exempt' },
   { id: 'directory', icon: ICONS.directory, label: 'Players' },
+  { id: 'bigbets', icon: ICONS.bigbets, label: 'Big Bets' },
   { id: 'dues', icon: ICONS.dues, label: 'Dues' },
   { id: 'standings', icon: ICONS.standings, label: 'Standings' },
   { id: 'commish', icon: ICONS.commish, label: 'Commish' },
@@ -756,6 +764,9 @@ async function loadDataForTab(){
   }
   if (ADP_TABS.includes(state.activeTab) && !state.data.adp){
     state.data.adp = await get('adp');
+  }
+  if (state.activeTab === 'bigbets' && !state.data.bigbets){
+    state.data.bigbets = await get('bigbets');
   }
 }
 
@@ -849,6 +860,7 @@ function render(){
     case 'dues': root.innerHTML = renderDues(); attachDuesHandlers(); break;
     case 'standings': root.innerHTML = renderStandingsTab(); attachStandingsHandlers(); break;
     case 'directory': root.innerHTML = renderDirectory(); attachDirectoryHandlers(); break;
+    case 'bigbets': root.innerHTML = renderBigBets(); attachBigBetsHandlers(); break;
     case 'commish': root.innerHTML = renderCommish(); attachCommishHandlers(); break;
   }
 }
@@ -1897,6 +1909,89 @@ function attachStandingsHandlers(){
   });
   const saveBtn = document.getElementById('saveBracketBtn');
   if (saveBtn) saveBtn.addEventListener('click', saveBracket);
+  const rb = document.getElementById('refreshBtn');
+  if (rb) rb.addEventListener('click', () => refreshAll(false));
+}
+
+/* =====================================================================
+   BIG BETS — up to 3 free-text season predictions per team, no scoring
+   logic, reviewed together once the season concludes.
+   ===================================================================== */
+function renderBigBets(){
+  if (!state.data.bigbets || !state.data.salaryCap) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
+
+  const myBets = [1, 2, 3].map(i => {
+    const found = state.data.bigbets.bets.find(b => b.team === state.selectedTeam && Number(b.betIndex) === i);
+    return found ? found.text : '';
+  });
+
+  let html = `<div class="card">
+    <div class="card-head">
+      <p class="eyebrow">Big Bets</p>
+      <h1>${state.selectedTeam || '—'}</h1>
+      <p class="subtext">Lock in up to 3 predictions for the season. Everyone in the league can see everyone's bets — we'll review them together once the season wraps up. No scoring or validation, just bragging rights on the line.</p>
+    </div>
+    <div class="list">
+      ${[1,2,3].map(i => `
+        <label style="margin:${i===1?'0':'14px'} 22px 4px;">Bet #${i}</label>
+        <input class="plain" id="bigBetInput${i}" placeholder="e.g. \\"We finish with the #1 overall record\\"" value="${(myBets[i-1]||'').replace(/"/g,'&quot;')}">
+      `).join('')}
+      <label style="margin:16px 22px 4px;">Your PIN, to save</label>
+      <div class="pin-row">
+        <input type="password" inputmode="numeric" id="bigBetsPinInput" placeholder="PIN" value="${state.ui.bigBetsPin}">
+        <button id="bigBetsSaveBtn">Save My Bets</button>
+      </div>
+      <div id="bigBetsErrBox"></div>
+    </div>
+  </div>`;
+
+  html += `<div class="card">
+    <div class="card-head"><p class="eyebrow">League Big Bets</p><h1>All Teams</h1></div>
+    <div class="list">`;
+  state.data.salaryCap.teams.forEach(t => {
+    const teamBets = [1,2,3].map(i => {
+      const found = state.data.bigbets.bets.find(b => b.team === t.team && Number(b.betIndex) === i);
+      return found && found.text ? found.text : null;
+    }).filter(Boolean);
+    const isMine = t.team === state.selectedTeam;
+    html += `<div class="row${isMine?' mine':''}">
+      <div class="rname">
+        <span class="n">${t.team}${isMine?'<span class="tag you">YOU</span>':''}</span>
+        ${teamBets.length
+          ? teamBets.map(b => `<div class="t" style="margin-top:3px;">"${b}"</div>`).join('')
+          : `<div class="t">No bets submitted yet</div>`}
+      </div>
+    </div>`;
+  });
+  html += `</div><div class="card-foot"><span>SOURCE: BigBets</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div></div>`;
+
+  return html;
+}
+
+function attachBigBetsHandlers(){
+  document.getElementById('bigBetsSaveBtn').addEventListener('click', async () => {
+    const pinInput = document.getElementById('bigBetsPinInput');
+    state.ui.bigBetsPin = pinInput.value.trim();
+    if (!state.ui.bigBetsPin){
+      document.getElementById('bigBetsErrBox').innerHTML = `<div class="err-box">PIN required to save.</div>`;
+      return;
+    }
+    const btn = document.getElementById('bigBetsSaveBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      for (let i = 1; i <= 3; i++){
+        const text = document.getElementById('bigBetInput'+i).value.trim();
+        await post({ action:'submitBigBet', team: state.selectedTeam, pin: state.ui.bigBetsPin, betIndex: i, text: text });
+      }
+      state.data.bigbets = await get('bigbets');
+      document.getElementById('bigBetsErrBox').innerHTML = '';
+      render();
+    } catch (err) {
+      document.getElementById('bigBetsErrBox').innerHTML = `<div class="err-box"><b>Save failed:</b> ${err.message}</div>`;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Save My Bets';
+    }
+  });
   const rb = document.getElementById('refreshBtn');
   if (rb) rb.addEventListener('click', () => refreshAll(false));
 }
