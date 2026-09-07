@@ -1399,9 +1399,11 @@ function renderDirectory(){
       <button class="toggle-btn${state.ui.directorySort==='position'?' active':''}" data-dsort="position">By Position</button>
       <button class="toggle-btn${state.ui.directorySort==='salary'?' active':''}" data-dsort="salary">By Salary</button>
       <button class="toggle-btn${state.ui.directorySort==='adp'?' active':''}" data-dsort="adp">By ADP</button>
+      <button class="toggle-btn${state.ui.directorySort==='value'?' active':''}" data-dsort="value">By Cost Value</button>
       <button class="toggle-btn${state.ui.directorySort==='name'?' active':''}" data-dsort="name">A–Z</button>
     </div>
     <div class="list" id="dirList"></div>
+    <div class="eligibility-note"><b>Cost Value (CV):</b> how good a player is (FantasyPros expert rank) relative to what they cost you. Higher = a bargain for their salary; lower = overpriced for their production. Free agents default to $1, so a ranked free agent will show a large CV — that's a "go get them" signal, not an error.</div>
     <div class="card-foot"><span>SOURCE: PlayerList_Current</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
   </div>`;
 }
@@ -1420,7 +1422,15 @@ function renderDirectoryList(){
 
   let pool = state.data.allPlayers.players.map(p => {
     const adpEntry = adpByName[p.player.trim().toLowerCase()];
-    return { ...p, adp: adpEntry ? adpEntry.adp : null, adpPpr: adpEntry ? adpEntry.adpPpr : null };
+    const ecrPpr = adpEntry ? adpEntry.ecrPpr : null;
+    // Cost Value = (1000 / ECR rank) / salary — see PRD discussion: higher
+    // means a strong player at a low cost (a bargain); lower means an
+    // expensive player not producing enough to justify the cap hit.
+    // Free agents default to $1 salary per the league's own convention,
+    // so a ranked free agent intentionally shows a large number here —
+    // that's a "go get this player" signal, not a bug.
+    const costValue = (ecrPpr && p.salary > 0) ? (1000 / ecrPpr) / p.salary : null;
+    return { ...p, adp: adpEntry ? adpEntry.adp : null, adpPpr: adpEntry ? adpEntry.adpPpr : null, ecrPpr, costValue };
   });
   const search = state.ui.directorySearch.trim().toLowerCase();
   if (search) pool = pool.filter(p => p.player.toLowerCase().includes(search));
@@ -1432,6 +1442,7 @@ function renderDirectoryList(){
   if (state.ui.directorySort === 'salary') pool.sort((a,b) => b.salary - a.salary);
   else if (state.ui.directorySort === 'name') pool.sort((a,b) => a.player.localeCompare(b.player));
   else if (state.ui.directorySort === 'adp') pool.sort((a,b) => (a.adpPpr ?? 9999) - (b.adpPpr ?? 9999));
+  else if (state.ui.directorySort === 'value') pool.sort((a,b) => (b.costValue ?? -1) - (a.costValue ?? -1));
   else pool.sort((a,b) => posRank(a.position)-posRank(b.position) || b.salary-a.salary);
 
   const totalMatches = pool.length;
@@ -1444,11 +1455,15 @@ function renderDirectoryList(){
     const rookieTag = p.isRookie ? '<span class="tag rookie">ROOKIE</span>' : '';
     const byeText = p.byeWeek ? `Bye ${p.byeWeek}` : 'Bye —';
     const adpText = p.adpPpr ? `ADP ${p.adpPpr}` : 'ADP —';
+    const cvText = p.costValue !== null ? `CV ${p.costValue.toFixed(1)}` : 'CV —';
     return `
       <div class="row">
         <span class="pos ${posClass(p.position)}">${p.position||'—'}</span>
         <span class="rname"><span class="n">${p.player}${rookieTag}${teamTag}</span><span class="t"> · ${p.nflTeam||'—'} · ${byeText} · ${adpText}</span></span>
-        <span class="rsal">$${p.salary}</span>
+        <div style="text-align:right;">
+          <div class="rsal">$${p.salary}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-soft);">${cvText}</div>
+        </div>
       </div>`;
   }).join('');
   if (totalMatches > 100){
