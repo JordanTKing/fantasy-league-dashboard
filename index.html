@@ -613,13 +613,17 @@ function buildAdpLookup(){
 }
 
 /**
- * Cost Value = (1000 / ECR rank) / salary — see the Directory's own
- * explainer for the full reasoning. Returns null when there's no ECR
- * data to work with, rather than a fake number.
+ * Cost Value = (1000 / ECR rank) / salary, scaled ×100 purely for
+ * display impact — bigger numbers (hundreds to low thousands) read as
+ * more meaningful than the raw single/double-digit output. The ×100 is
+ * a constant multiplier, so it doesn't change any relative comparison
+ * or sort order, just the visible scale. See the Directory's own
+ * explainer for the underlying reasoning. Returns null when there's no
+ * ECR data to work with, rather than a fake number.
  */
 function computeCostValue(ecrPpr, salary){
   if (!ecrPpr || !salary || salary <= 0) return null;
-  return (1000 / ecrPpr) / salary;
+  return ((1000 / ecrPpr) / salary) * 100;
 }
 
 function fmtCostValue(cv){
@@ -1533,13 +1537,10 @@ function renderDirectoryList(){
   let pool = state.data.allPlayers.players.map(p => {
     const adpEntry = adpByName[p.player.trim().toLowerCase()];
     const ecrPpr = adpEntry ? adpEntry.ecrPpr : null;
-    // Cost Value = (1000 / ECR rank) / salary — see PRD discussion: higher
-    // means a strong player at a low cost (a bargain); lower means an
-    // expensive player not producing enough to justify the cap hit.
-    // Free agents default to $1 salary per the league's own convention,
-    // so a ranked free agent intentionally shows a large number here —
-    // that's a "go get this player" signal, not a bug.
-    const costValue = (ecrPpr && p.salary > 0) ? (1000 / ecrPpr) / p.salary : null;
+    // Uses the shared computeCostValue() helper (same one My Team and
+    // What-If call) instead of a separate copy of the formula — keeps
+    // every screen in sync automatically if the formula ever changes.
+    const costValue = computeCostValue(ecrPpr, p.salary);
     return { ...p, adp: adpEntry ? adpEntry.adp : null, adpPpr: adpEntry ? adpEntry.adpPpr : null, ecrPpr, costValue };
   });
   const search = state.ui.directorySearch.trim().toLowerCase();
