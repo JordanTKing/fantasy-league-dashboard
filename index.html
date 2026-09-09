@@ -565,6 +565,7 @@ const state = {
     directoryPosFilter: 'all',
     directoryRookieFilter: 'all',
     bigBetsPin: '',
+    bigBetsView: 'league',
     directorySort: 'position',
     standingsView: 'standings',
     bracketEditMode: false,
@@ -1920,78 +1921,90 @@ function attachStandingsHandlers(){
 function renderBigBets(){
   if (!state.data.bigbets || !state.data.salaryCap) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
 
-  const myBets = [1, 2, 3].map(i => {
-    const found = state.data.bigbets.bets.find(b => b.team === state.selectedTeam && Number(b.betIndex) === i);
-    return found ? found.text : '';
-  });
-
   let html = `<div class="card">
     <div class="card-head">
       <p class="eyebrow">Big Bets</p>
-      <h1>${state.selectedTeam || '—'}</h1>
-      <p class="subtext">Lock in up to 3 predictions for the season. Everyone in the league can see everyone's bets — we'll review them together once the season wraps up. No scoring or validation, just bragging rights on the line.</p>
+      <h1>Season Predictions</h1>
+      <p class="subtext">Everyone in the league can see everyone's bets — we'll review them together once the season wraps up. No scoring or validation, just bragging rights on the line.</p>
     </div>
-    <div class="list">
-      ${[1,2,3].map(i => `
-        <label style="margin:${i===1?'0':'14px'} 22px 4px;">Bet #${i}</label>
-        <input class="plain" id="bigBetInput${i}" placeholder="e.g. \\"We finish with the #1 overall record\\"" value="${(myBets[i-1]||'').replace(/"/g,'&quot;')}">
-      `).join('')}
-      <label style="margin:16px 22px 4px;">Your PIN, to save</label>
-      <div class="pin-row">
-        <input type="password" inputmode="numeric" id="bigBetsPinInput" placeholder="PIN" value="${state.ui.bigBetsPin}">
-        <button id="bigBetsSaveBtn">Save My Bets</button>
-      </div>
-      <div id="bigBetsErrBox"></div>
-    </div>
-  </div>`;
-
-  html += `<div class="card">
-    <div class="card-head"><p class="eyebrow">League Big Bets</p><h1>All Teams</h1></div>
-    <div class="list">`;
-  state.data.salaryCap.teams.forEach(t => {
-    const teamBets = [1,2,3].map(i => {
-      const found = state.data.bigbets.bets.find(b => b.team === t.team && Number(b.betIndex) === i);
-      return found && found.text ? found.text : null;
-    }).filter(Boolean);
-    const isMine = t.team === state.selectedTeam;
-    html += `<div class="row${isMine?' mine':''}">
-      <div class="rname">
-        <span class="n">${t.team}${isMine?'<span class="tag you">YOU</span>':''}</span>
-        ${teamBets.length
-          ? teamBets.map(b => `<div class="t" style="margin-top:3px;">"${b}"</div>`).join('')
-          : `<div class="t">No bets submitted yet</div>`}
-      </div>
+    <div class="toggle-row">
+      <button class="toggle-btn${state.ui.bigBetsView==='league'?' active':''}" data-bbview="league">League Bets</button>
+      <button class="toggle-btn${state.ui.bigBetsView==='mine'?' active':''}" data-bbview="mine">My Big Bets</button>
     </div>`;
-  });
-  html += `</div><div class="card-foot"><span>SOURCE: BigBets</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div></div>`;
 
+  if (state.ui.bigBetsView === 'league'){
+    html += `<div class="list">`;
+    state.data.salaryCap.teams.forEach(t => {
+      const teamBets = [1,2,3].map(i => {
+        const found = state.data.bigbets.bets.find(b => b.team === t.team && Number(b.betIndex) === i);
+        return found && found.text ? found.text : null;
+      }).filter(Boolean);
+      const isMine = t.team === state.selectedTeam;
+      html += `<div class="row${isMine?' mine':''}">
+        <div class="rname">
+          <span class="n">${t.team}${isMine?'<span class="tag you">YOU</span>':''}</span>
+          ${teamBets.length
+            ? teamBets.map(b => `<div class="t" style="margin-top:3px;">"${b}"</div>`).join('')
+            : `<div class="t">No bets submitted yet</div>`}
+        </div>
+      </div>`;
+    });
+    html += `</div><div class="card-foot"><span>SOURCE: BigBets</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>`;
+  } else {
+    const myBets = [1, 2, 3].map(i => {
+      const found = state.data.bigbets.bets.find(b => b.team === state.selectedTeam && Number(b.betIndex) === i);
+      return found ? found.text : '';
+    });
+    html += `<div class="section-label">${state.selectedTeam || '—'}</div>
+      <div class="list">
+        ${[1,2,3].map(i => `
+          <label style="margin:${i===1?'0':'14px'} 22px 4px;">Bet #${i}</label>
+          <input class="plain" id="bigBetInput${i}" placeholder="e.g. \\"We finish with the #1 overall record\\"" value="${(myBets[i-1]||'').replace(/"/g,'&quot;')}">
+        `).join('')}
+        <label style="margin:16px 22px 4px;">Your PIN, to save</label>
+        <div class="pin-row">
+          <input type="password" inputmode="numeric" id="bigBetsPinInput" placeholder="PIN" value="${state.ui.bigBetsPin}">
+          <button id="bigBetsSaveBtn">Save My Bets</button>
+        </div>
+        <div id="bigBetsErrBox"></div>
+      </div>`;
+  }
+
+  html += `</div>`;
   return html;
 }
 
 function attachBigBetsHandlers(){
-  document.getElementById('bigBetsSaveBtn').addEventListener('click', async () => {
-    const pinInput = document.getElementById('bigBetsPinInput');
-    state.ui.bigBetsPin = pinInput.value.trim();
-    if (!state.ui.bigBetsPin){
-      document.getElementById('bigBetsErrBox').innerHTML = `<div class="err-box">PIN required to save.</div>`;
-      return;
-    }
-    const btn = document.getElementById('bigBetsSaveBtn');
-    btn.disabled = true; btn.textContent = 'Saving…';
-    try {
-      for (let i = 1; i <= 3; i++){
-        const text = document.getElementById('bigBetInput'+i).value.trim();
-        await post({ action:'submitBigBet', team: state.selectedTeam, pin: state.ui.bigBetsPin, betIndex: i, text: text });
-      }
-      state.data.bigbets = await get('bigbets');
-      document.getElementById('bigBetsErrBox').innerHTML = '';
-      render();
-    } catch (err) {
-      document.getElementById('bigBetsErrBox').innerHTML = `<div class="err-box"><b>Save failed:</b> ${err.message}</div>`;
-    } finally {
-      btn.disabled = false; btn.textContent = 'Save My Bets';
-    }
+  document.querySelectorAll('[data-bbview]').forEach(btn => {
+    btn.addEventListener('click', () => { state.ui.bigBetsView = btn.getAttribute('data-bbview'); render(); });
   });
+
+  const saveBtn = document.getElementById('bigBetsSaveBtn');
+  if (saveBtn){
+    saveBtn.addEventListener('click', async () => {
+      const pinInput = document.getElementById('bigBetsPinInput');
+      state.ui.bigBetsPin = pinInput.value.trim();
+      if (!state.ui.bigBetsPin){
+        document.getElementById('bigBetsErrBox').innerHTML = `<div class="err-box">PIN required to save.</div>`;
+        return;
+      }
+      saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+      try {
+        for (let i = 1; i <= 3; i++){
+          const text = document.getElementById('bigBetInput'+i).value.trim();
+          await post({ action:'submitBigBet', team: state.selectedTeam, pin: state.ui.bigBetsPin, betIndex: i, text: text });
+        }
+        state.data.bigbets = await get('bigbets');
+        document.getElementById('bigBetsErrBox').innerHTML = '';
+        render();
+      } catch (err) {
+        document.getElementById('bigBetsErrBox').innerHTML = `<div class="err-box"><b>Save failed:</b> ${err.message}</div>`;
+      } finally {
+        saveBtn.disabled = false; saveBtn.textContent = 'Save My Bets';
+      }
+    });
+  }
+
   const rb = document.getElementById('refreshBtn');
   if (rb) rb.addEventListener('click', () => refreshAll(false));
 }
