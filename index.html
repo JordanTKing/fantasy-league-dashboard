@@ -592,6 +592,15 @@ function posClass(pos){
   const p=(pos||'').toUpperCase();
   return ['QB','RB','WR','TE','K','DST'].includes(p) ? 'pos-'+p : 'pos-other';
 }
+// Distinct from the position-badge palette on purpose, so round chips and
+// position chips never get visually confused with each other. Cycles if
+// a draft ever runs longer than 8 rounds.
+const ROUND_COLORS = ['#c9a24b', '#b3574a', '#8a4a5c', '#7a9c6f', '#6f89a8', '#9c6f8a', '#5a8f8f', '#8a8270'];
+function roundColor(round){
+  const n = parseInt(round, 10);
+  if (isNaN(n) || n < 1) return ROUND_COLORS[ROUND_COLORS.length - 1];
+  return ROUND_COLORS[(n - 1) % ROUND_COLORS.length];
+}
 function sortedRoster(roster, mode){
   const list = [...roster];
   if (mode === 'salary') list.sort((a,b) => b.salary - a.salary);
@@ -1036,7 +1045,7 @@ function renderDraftPicks(){
       const sub = p.overallPick ? `Overall #${p.overallPick}` : '';
       return `
         <div class="row">
-          <span class="round-chip">${p.round}</span>
+          <span class="round-chip" style="background:${roundColor(p.round)};">${p.round}</span>
           <div class="rname"><span class="n">${label}</span>${sub?`<div class="t">${sub}</div>`:''}</div>
           ${p.traded?`<span class="tag team">via ${p.originalOwnerTeam}</span>`:''}
         </div>`;
