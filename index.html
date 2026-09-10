@@ -757,8 +757,8 @@ const MORE_TABS = [
   { id: 'commish', icon: ICONS.commish, label: 'Commish' },
 ];
 const TABS = PRIMARY_TABS.concat(MORE_TABS);
-const ALL_PLAYERS_TABS = ['whatif', 'directory'];
-const ADP_TABS = ['team', 'whatif', 'directory'];
+const ALL_PLAYERS_TABS = ['whatif', 'directory', 'league'];
+const ADP_TABS = ['team', 'whatif', 'directory', 'league'];
 
 async function loadDataForTab(){
   if (TEAM_TABS.includes(state.activeTab) && !state.data.roster){
@@ -961,15 +961,30 @@ function renderLeague(){
   const cap = state.data.salaryCap;
   if (!cap) return `<div class="card"><div class="placeholder">Loading…</div></div>`;
 
+  const adpLookup = buildAdpLookup();
+  const hasPlayerData = !!state.data.allPlayers;
+
   let teams = [...cap.teams];
-  if (state.ui.leagueSort === 'cap') teams.sort((a,b) => a.capSpace - b.capSpace);
-  else teams.sort((a,b) => a.team.localeCompare(b.team));
+  teams.sort((a,b) => a.capSpace - b.capSpace);
 
   const rows = teams.map((t,i) => {
     const over = t.capSpace < 0;
     const pct = Math.min(t.capUsedPct, 100);
     const barColor = over ? 'var(--over)' : (t.capUsedPct>90 ? 'var(--warn)' : 'var(--good)');
     const isMine = t.team === state.selectedTeam;
+
+    let totalCV = null;
+    if (hasPlayerData){
+      let sum = 0, has = false;
+      state.data.allPlayers.players.forEach(p => {
+        if (p.fantasyTeam !== t.team) return;
+        const entry = adpLookup[p.player.trim().toLowerCase()];
+        const cv = entry ? computeCostValue(entry.ecrPpr, p.salary) : null;
+        if (cv !== null) { sum += cv; has = true; }
+      });
+      totalCV = has ? sum : null;
+    }
+
     return `
       <div class="row${isMine?' mine':''}">
         <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);width:16px;text-align:right;">${i+1}</span>
@@ -979,7 +994,7 @@ function renderLeague(){
         </div>
         <div style="text-align:right;">
           <div class="rsal" style="color:${over?'var(--over)':'var(--ink)'};">${over?'−':''}${fmtMoney(Math.abs(t.capSpace))}</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);">${t.capUsedPct}%</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);">${t.capUsedPct}% · CV ${hasPlayerData ? fmtCostValue(totalCV) : '…'}</div>
         </div>
       </div>`;
   }).join('');
@@ -989,20 +1004,13 @@ function renderLeague(){
       <div class="card-head">
         <p class="eyebrow">League Overview</p>
         <h1>All 12 Teams</h1>
-        <p class="subtext">Sorted to surface trade targets — tightest cap space needs to shed salary.</p>
-      </div>
-      <div class="toggle-row">
-        <button class="toggle-btn${state.ui.leagueSort==='cap'?' active':''}" data-lsort="cap">Cap Space ↑</button>
-        <button class="toggle-btn${state.ui.leagueSort==='az'?' active':''}" data-lsort="az">A–Z</button>
+        <p class="subtext">Sorted by cap space (tightest first) to surface trade targets — plus each team's Total Cost Value, so you can spot efficient rosters, not just spenders.</p>
       </div>
       <div class="list">${rows}</div>
       <div class="card-foot"><span>SOURCE: League Salary Cap</span><button class="refresh" id="refreshBtn">↻ Refresh</button></div>
     </div>`;
 }
 function attachLeagueHandlers(){
-  document.querySelectorAll('[data-lsort]').forEach(btn => {
-    btn.addEventListener('click', () => { state.ui.leagueSort = btn.getAttribute('data-lsort'); render(); });
-  });
   const rb = document.getElementById('refreshBtn');
   if (rb) rb.addEventListener('click', () => refreshAll(false));
 }
